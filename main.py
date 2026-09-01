@@ -29,3 +29,12 @@ class Conta:
 
     def consultar_saldo(self):
         return self.saldo
+
+
+def main():
+    nome = input("Nome: ")
+    cpf = input("CPF: ")
+    telefone = input("Telefone: ")
+    senha = input("Senha: ")
+
+    novo_cliente = criar_cliente(nome, cpf, telefone, senha)
