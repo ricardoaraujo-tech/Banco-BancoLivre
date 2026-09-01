@@ -38,3 +38,6 @@ def main():
     senha = input("Senha: ")
 
     novo_cliente = criar_cliente(nome, cpf, telefone, senha)
+    #adicionei if para chamar a funcao main.(layrton)
+    if __name__ == "__main__":
+        main()
