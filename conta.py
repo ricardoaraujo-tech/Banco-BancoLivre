@@ -1,13 +1,13 @@
 class Conta:
     
-  def __init__(self,numero,nome,senha):
+  def __init__(self,numero,nome,senha,depositar,sacar):
       self.numero = numero
       self.nome = nome 
       self.senha = senha
       self.saldo = 0
-    def depositar (self, valor):
+ def depositar (self, valor):
     if valor > 0:
-       self saldo += valor 
+       self.saldo += valor 
        return True
     return False
 def sacar (self, valor):
@@ -15,6 +15,6 @@ def sacar (self, valor):
        self.saldo -= valor
        return True
     return False
-def consultar_salto(self):
+def consultar_saldo(self):
     return self.saldo
 
