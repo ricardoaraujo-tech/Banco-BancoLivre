@@ -10,4 +10,4 @@ class Cliente:
 def criar_cliente(nome, cpf, telefone):
     cliente = Cliente(nome, cpf, telefone, senha=None)
     return cliente
-for in conta return conta
+for in conta return contas
