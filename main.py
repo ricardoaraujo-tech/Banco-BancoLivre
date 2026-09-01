@@ -38,5 +38,5 @@ def main():
     senha = input("Senha: ")
 
     novo_cliente = criar_cliente(nome, cpf, telefone, senha)
-    if __name__ == "__main__":
+if __name__ == "__main__":
         main()
