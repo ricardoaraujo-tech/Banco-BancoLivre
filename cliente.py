@@ -1,6 +1,6 @@
 #Variáveis definidas -> Nome, CPF, Telefone
-
-def criar_cliente (nome, cpf, telefone):
-    cliente = {"Nome: ": nome, "CPF: ": cpf, "Telefone: ": telefone}
-    return cliente
- 
+    def__init__ (self,numero,nome,cpf):
+      self.telefone = telefone
+      self.nome = nome 
+      self.cpf = cpf
+    
