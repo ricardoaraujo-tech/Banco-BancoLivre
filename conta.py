@@ -1,6 +1,6 @@
 class Conta:
     
-    def__init__ (self,numero,nome,senha):
+  def __init__(self,numero,nome,senha):
       self.numero = numero
       self.nome = nome 
       self.senha = senha
