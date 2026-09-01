@@ -9,5 +9,5 @@ class Cliente:
 
 def criar_cliente(nome, cpf, telefone, senha):
     cliente = Cliente(nome, cpf, telefone, senha)
-    return Cliente
+    return cliente
 
