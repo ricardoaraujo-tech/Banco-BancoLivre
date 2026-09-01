@@ -6,15 +6,15 @@ class Conta:
       self.senha = senha
       self.saldo = 0
     def depositar (self, valor):
-    if valor > 0
+    if valor > 0:
        self saldo += valor 
        return True
     return False
-def sacar (self, valor)
+def sacar (self, valor):
     if valor > 0 and valor <= self.saldo:
-       self saldo -= valor
+       self.saldo -= valor
        return True
     return False
-def consutar_salto(self):
+def consultar_salto(self):
     return self.saldo
 
