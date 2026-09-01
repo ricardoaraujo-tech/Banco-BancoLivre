@@ -7,7 +7,7 @@ class Cliente:
         self.telefone = telefone
         self.senha = senha
 
-def criar_cliente(nome, cpf, telefone):
-    cliente = Cliente(nome, cpf, telefone, senha=None)
-    return cliente
+def criar_cliente(nome, cpf, telefone, senha):
+    cliente = Cliente(nome, cpf, telefone, senha)
+    return Cliente
 
