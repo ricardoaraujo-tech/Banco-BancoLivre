@@ -1,46 +1,53 @@
-class Cliente:
-    def __init__(self, nome, cpf, telefone, senha):
-        self.nome = nome
-        self.cpf = cpf
-        self.telefone = telefone
-        self.senha = senha
+from cliente import Cliente
+from conta import Conta
 
+print("--- Cadastro de Cliente ---")
+nome = input("Digite o nome do cliente: ")
+cpf = input("Digite o CPF do cliente: ")
+telefone = input("Digite o telefone do cliente: ")
+endereco = input("Digite o endereço do cliente: ")
 
-def criar_cliente(nome, cpf, telefone, senha):
-    return Cliente(nome, cpf, telefone, senha)
+cliente = Cliente(nome, cpf, telefone, endereco)
 
+print("--- Cadastro de Conta ---")
+numero = input("Digite o número da conta: ")
+senha = input("Crie a senha da conta (APENAS NÚMEROS): ")
 
-class Conta:
-    def __init__(self, numero, cliente):
-        self.numero = numero
-        self.cliente = cliente
-        self.saldo = 0.0
+conta_cliente = Conta(numero, cliente, senha)
 
-    def depositar(self, valor):
-        if valor > 0:
-            self.saldo += valor
-            return True
-        return False
+print("Cliente e conta cadastrados com sucesso!")
 
-    def sacar(self, valor):
-        if 0 < valor <= self.saldo:
-            self.saldo -= valor
-            return True
-        return False
+while True:
+    print("\n--- Menu ---")
+    print("1. Depositar")
+    print("2. Sacar")
+    print("3. Consultar Saldo")
+    print("4. Sair")
 
-    def consultar_saldo(self):
-        return self.saldo
+    opcao = input("Escolha uma opção: ")
 
+    if opcao == "1":
+        valor = float(input("Digite o valor a ser depositado: "))
+        if conta_cliente.depositar(valor):
+            print(f"Depósito de R${valor:.2f} realizado com sucesso!")
+        else:
+            print("Valor inválido para depósito.")
 
-def main():
-    nome = input("Nome: ")
-    cpf = input("CPF: ")
-    telefone = input("Telefone: ")
-    senha = input("Senha: ")
+    elif opcao == "2":
+        valor = float(input("Digite o valor a ser sacado: "))
+        senha_informada = input("Digite a senha da conta: ")
+        if conta_cliente.sacar(valor, senha_informada):
+            print(f"Saque de R${valor:.2f} realizado com sucesso!")
+        else:
+            print("Saque não realizado. Verifique o valor ou a senha.")
 
-    novo_cliente = criar_cliente(nome, cpf, telefone, senha)
-    nova_conta = Conta(numero="0001", cliente=novo_cliente)
+    elif opcao == "3":
+        saldo = conta_cliente.consultar_saldo()
+        print(f"Saldo atual: R${saldo:.2f}")
 
+    elif opcao == "4":
+        print("Saindo do sistema...")
+        break
 
-if __name__ == "__main__":
-    main()
+    else:
+        print("Opção inválida. Tente novamente.")
