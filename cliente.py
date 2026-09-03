@@ -1,13 +1,8 @@
-#Variáveis definidas -> Nome, CPF, Telefone
- #editei pfv dar uma olhada oque voces acham, ps:layrton
+ #Variáveis definidas -> Nome, CPF, Telefone e Endereco.
+
 class Cliente:
-    def __init__(self, nome, cpf, telefone, senha):
+    def __init__(self, nome, cpf, telefone, endereco):
         self.nome = nome
         self.cpf = cpf
         self.telefone = telefone
-        self.senha = senha
-
-def criar_cliente(nome, cpf, telefone, senha):
-    cliente = Cliente(nome, cpf, telefone, senha)
-    return cliente
-
+        self.endereco = endereco
