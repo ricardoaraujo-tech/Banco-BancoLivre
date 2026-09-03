@@ -5,6 +5,7 @@ class Cliente:
         self.telefone = telefone
         self.senha = senha
 
+
 def criar_cliente(nome, cpf, telefone, senha):
     return Cliente(nome, cpf, telefone, senha)
 
@@ -12,17 +13,17 @@ def criar_cliente(nome, cpf, telefone, senha):
 class Conta:
     def __init__(self, numero, cliente):
         self.numero = numero
-        self.cliente = cliente  # Associa a conta ao objeto Cliente
-        self.saldo = 0
+        self.cliente = cliente
+        self.saldo = 0.0
 
     def depositar(self, valor):
         if valor > 0:
-            self.saldo += valor 
+            self.saldo += valor
             return True
         return False
 
     def sacar(self, valor):
-        if valor > 0 and valor <= self.saldo:
+        if 0 < valor <= self.saldo:
             self.saldo -= valor
             return True
         return False
@@ -38,5 +39,8 @@ def main():
     senha = input("Senha: ")
 
     novo_cliente = criar_cliente(nome, cpf, telefone, senha)
+    nova_conta = Conta(numero="0001", cliente=novo_cliente)
+
+
 if __name__ == "__main__":
     main()
