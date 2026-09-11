@@ -1,5 +1,7 @@
 from cliente import Cliente
 from conta import Conta
+lista_clientes = []
+
 
 print("--- Cadastro de Cliente ---")
 nome = input("Digite o nome do cliente: ")
@@ -7,13 +9,12 @@ cpf = input("Digite o CPF do cliente: ")
 telefone = input("Digite o telefone do cliente: ")
 endereco = input("Digite o endereço do cliente: ")
 
-cliente = Cliente(nome, cpf, telefone, endereco)
-
+ 
 print("--- Cadastro de Conta ---")
 numero = input("Digite o número da conta: ")
 senha = input("Crie a senha da conta (APENAS NÚMEROS): ")
 
-conta_cliente = Conta(numero, cliente, senha)
+conta_cliente = Conta(numero, novo_cliente, senha)
 
 print("Cliente e conta cadastrados com sucesso!")
 
@@ -51,3 +52,13 @@ while True:
 
     else:
         print("Opção inválida. Tente novamente.")
+        
+    novo_cliente = Cliente(nome, cpf, telefone, endereco)
+
+    lista_clientes.append(novo_cliente)
+
+    continuar_cadastro = str(input('Deseja cadastrar um novo cliente? S OU N'))
+    if continuar_cadastro.upper() != 'S':
+        break
+for cliente in lista_clientes:
+    print(f'Nome: {cliente.nome} | CPF: {cliente.cpf}')
