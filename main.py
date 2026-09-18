@@ -1,46 +1,361 @@
-class Cliente:
-    def __init__(self, nome, cpf, telefone, senha):
-        self.nome = nome
-        self.cpf = cpf
-        self.telefone = telefone
-        self.senha = senha
+import json
+from cliente import Cliente
+from conta import Conta
+from agencia import Agencia
 
+lista_clientes = []
+lista_agencias = []
+lista_contas = []  
 
-def criar_cliente(nome, cpf, telefone, senha):
-    return Cliente(nome, cpf, telefone, senha)
+try: 
+    with open('dados_bancos.json', 'r') as arquivo:
 
+        dados_salvos = json.load(arquivo)
 
-class Conta:
-    def __init__(self, numero, cliente):
-        self.numero = numero
-        self.cliente = cliente
-        self.saldo = 0.0
+        for cliente_data in dados_salvos[0]:
+            lista_clientes.append(Cliente(cliente_data[0], cliente_data[1], cliente_data[2], cliente_data[3]))
 
-    def depositar(self, valor):
-        if valor > 0:
-            self.saldo += valor
-            return True
-        return False
+        for agencia_data in dados_salvos[1]:
+            lista_agencias.append(Agencia(agencia_data[0], agencia_data[1]))
 
-    def sacar(self, valor):
-        if 0 < valor <= self.saldo:
-            self.saldo -= valor
-            return True
-        return False
+        for conta_data in dados_salvos[2]:
 
-    def consultar_saldo(self):
-        return self.saldo
+            for cliente in lista_clientes:
+                if cliente.cpf == conta_data[1]:
+                    cliente_vinculado = cliente
+                    break
+            else:
+                continue  
 
+            for agencia in lista_agencias:
+                if agencia.numero == conta_data[2]:
+                    agencia_vinculada = agencia
+                    break
+            else:
+                continue
 
-def main():
-    nome = input("Nome: ")
-    cpf = input("CPF: ")
-    telefone = input("Telefone: ")
-    senha = input("Senha: ")
+            conta_restaurada = Conta(conta_data[0], cliente_vinculado, agencia_vinculada, conta_data[3])
+            conta_restaurada.saldo = conta_data[4]
+            lista_contas.append(conta_restaurada)    
 
-    novo_cliente = criar_cliente(nome, cpf, telefone, senha)
-    nova_conta = Conta(numero="0001", cliente=novo_cliente)
+except FileNotFoundError:
+    print('\nArquivo de dados não encontrado. Iniciando com listas vazias.')
 
+print('\nBem-vindo ao sistema bancário!')
 
-if __name__ == "__main__":
-    main()
+while True:
+    print('\n======================')
+    print('=== MENU DE OPÇÕES ===')
+    print('Cadastrar Cliente (1)')
+    print('Cadastrar Agência (2)')
+    print('Cadastrar Conta (3)')
+    print('Listar Clientes (4)')
+    print('Listar Agências (5)')
+    print('Listar Contas (6)')
+    print('Depositar (7)')
+    print('Sacar (8)')
+    print('Transferir (9)')
+    print('Consultar Saldo (10)')
+    print('Relatorio do Banco (11)')
+    print('Editar Cliente (12)')
+    print('Excluir Cliente (13)')
+    print('Encerrar Contas (14)')
+    print('Buscar Cliente (15)')
+    print('Sair (0)')
+    print('======================')
+
+    opcao = input('\nEscolha uma opção: ')
+
+    if opcao == '1':
+        print('\n=== CADASTRO DE CLIENTE ===')
+        nome = input('\nDigite o nome do cliente: ')
+        cpf = input('Digite o CPF do cliente: ')
+        telefone = input('Digite o telefone do cliente: ')
+        endereco = input('Digite o endereço do cliente: ')
+
+        novo_cliente = Cliente(nome, cpf, telefone, endereco)
+        lista_clientes.append(novo_cliente)
+        print('\nCliente cadastrado com sucesso!')
+
+    elif opcao == '2':
+        print('\n=== CADASTRO DE AGÊNCIA ===')
+        numero = input('\nDigite o número da agência: ')
+        nome = input('Digite o nome da agência: ')
+
+        nova_agencia = Agencia(numero, nome)
+        lista_agencias.append(nova_agencia)
+        print('\nAgência cadastrada com sucesso!')
+
+    elif opcao == '3':
+        print('\n=== CADASTRO DE CONTA ===')
+        titular_cpf = input('\nDigite o CPF do titular da conta: ')
+
+        for cliente in lista_clientes:
+            if cliente.cpf == titular_cpf:
+                cliente_encontrado = cliente
+                break
+        else:
+            print('\nCliente não encontrado. Cadastre o cliente antes de criar a conta.')
+            continue
+
+        agencia_busca = input('\nDigite o número da agência: ')
+
+        for agencia in lista_agencias:
+            if agencia.numero == agencia_busca:
+                agencia_encontrada = agencia
+                break
+        else:
+            print('\nAgência não encontrada. Cadastre a agência antes de criar a conta.')
+            continue    
+
+        numero = input('\nDigite o número da conta: ')
+        senha = input('\nDigite a senha da conta: ')
+
+        nova_conta = Conta(numero, cliente_encontrado, agencia_encontrada, senha)
+        lista_contas.append(nova_conta)
+        print(f'\nConta cadastrada com sucesso! Titular: {cliente_encontrado.nome}, Agência: {agencia_encontrada.nome}, Número da Conta: {numero}')
+    
+    elif opcao == '4':
+        print('\n=== LISTA DE CLIENTES ===')
+        if not lista_clientes:
+            print('\nNenhum cliente cadastrado.')
+        else:
+            for cliente in lista_clientes:
+                print(f'\nNome: {cliente.nome}, CPF: {cliente.cpf}, Telefone: {cliente.telefone}, Endereço: {cliente.endereco}')
+
+    elif opcao == '5':
+        print('\n=== LISTA DE AGÊNCIAS ===')
+        if not lista_agencias:
+            print('\nNenhuma agência cadastrada.')
+        else:
+            for agencia in lista_agencias:
+                print(f'\nNúmero: {agencia.numero}, Nome: {agencia.nome}')
+
+    elif opcao == '6':
+        print('\n=== LISTA DE CONTAS ===')
+        if not lista_contas:
+            print('\nNenhuma conta cadastrada.')
+        else:
+            for conta in lista_contas:
+                print(f'\nNúmero: {conta.numero} | Agência: {conta.agencia.numero} - {conta.agencia.nome}')
+                print(f'Titular: {conta.titular.nome} (CPF: {conta.titular.cpf})')
+                print(f'Saldo: R${conta.saldo:.2f}')
+
+    elif opcao == '7':
+        print('\n=== DEPÓSITO ===')
+        numero_conta = input('\nDigite o número da conta: ')
+
+        for conta in lista_contas:
+            if conta.numero == numero_conta:
+                valor = float(input('\nDigite o valor a ser depositado: '))
+
+                if conta.depositar(valor):
+                    print(f'\nDepósito de R${valor:.2f} realizado com sucesso! Novo saldo: R${conta.saldo:.2f}')
+                else:
+                    print('\nDepósito não realizado. O valor deve ser maior que zero.')
+                break
+        else:
+            print('\nConta não encontrada.')
+    
+    elif opcao == '8':
+        print('\n=== SAQUE ===')
+        numero_conta = input('\nDigite o número da conta: ')
+
+        for conta in lista_contas:
+            if conta.numero == numero_conta:
+                valor = float(input('\nDigite o valor a ser sacado: '))
+                senha_informada = input('\nDigite a senha da conta: ')
+
+                if conta.sacar(valor, senha_informada):
+                    print(f'\nSaque de R${valor:.2f} realizado com sucesso! Novo saldo: R${conta.saldo:.2f}')
+                else:
+                    print('\nSaque não realizado. Verifique o valor e a senha informada.')
+                break
+        else:
+            print('\nConta não encontrada.')
+
+    elif opcao == '9':
+        print('\n=== TRANSFERÊNCIA ===')
+        numero_conta_origem = input('\nDigite o número da conta de origem: ')
+
+        for conta in lista_contas:
+            if conta.numero == numero_conta_origem:
+
+                numero_conta_destino = input('\nDigite o número da conta de destino: ')
+                for conta_destino in lista_contas:
+                    if conta_destino.numero == numero_conta_destino:
+                        valor = float(input('\nDigite o valor a ser transferido: '))
+                        senha_informada = input('\nDigite a senha da conta de origem: ')
+
+                        if conta.sacar(valor, senha_informada):
+                            conta_destino.depositar(valor)
+                            print(f'\nTransferência de R${valor:.2f} realizada com sucesso! Novo saldo da conta de origem: R${conta.saldo:.2f}')
+                        else:
+                            print('\nTransferência não realizada. Verifique o valor e a senha informada.')
+                        break
+                else:
+                    print('\nConta de destino não encontrada.')
+
+                break
+        else:
+            print('\nConta de origem não encontrada.')            
+                   
+        
+    elif opcao == '10':
+        print('\n=== CONSULTA DE SALDO ===')
+        numero_conta = input('\nDigite o número da conta: ')
+
+        for conta in lista_contas:
+            if conta.numero == numero_conta:
+                senha_informada = input('\nDigite a senha da conta: ')
+
+                if senha_informada == conta.senha:
+                    saldo = conta.consultar_saldo()
+                    print(f'\nSaldo da conta {numero_conta}: R${saldo:.2f}')
+                else:
+                    print('\nSenha incorreta. Não foi possível consultar o saldo.')
+                break
+        else:
+            print('\nConta não encontrada.')
+
+    elif opcao == '11':
+        print('\n=== RELATÓRIO DO BANCO ===')
+
+        total_banco = 0.0
+        for conta in lista_contas:
+            total_banco += conta.saldo
+        print(f'\nMontante total do banco: R${total_banco:.2f}')    
+
+        numero_agencia = input('\nDigite o número da agência para consultar o montante: ')
+
+        for agencia in lista_agencias:
+            if agencia.numero == numero_agencia:
+                total_agencia = 0.0
+                for conta in lista_contas:
+                    if conta.agencia.numero == agencia.numero:
+                        total_agencia += conta.saldo
+                print(f'\nMontante total da agência {agencia.nome} (Número: {agencia.numero}): R${total_agencia:.2f}')
+                break
+        else:
+            print('\nAgência não encontrada.')
+
+    elif opcao == '12':
+        print('\n=== EDITAR CLIENTE ===')
+        cpf_busca = input('\nDigite o CPF do cliente a ser editado: ')
+
+        for cliente in lista_clientes:
+            if cliente.cpf == cpf_busca:
+                print(f'\nCliente encontrado: {cliente.nome} (CPF: {cliente.cpf})')
+                novo_nome = input('\nDigite o novo nome do cliente (ou pressione Enter para manter o atual): ')
+                novo_telefone = input('Digite o novo telefone do cliente (ou pressione Enter para manter o atual): ')
+                novo_endereco = input('Digite o novo endereço do cliente (ou pressione Enter para manter o atual): ')
+
+                if novo_nome != '':
+                    cliente.nome = novo_nome
+
+                if novo_telefone != '':
+                    cliente.telefone = novo_telefone
+
+                if novo_endereco != '':
+                    cliente.endereco = novo_endereco
+
+                print('\nCliente atualizado com sucesso!')
+                break
+        else:
+            print('\nCliente não encontrado.')
+
+    elif opcao == '13':
+        print('\n=== EXCLUIR CLIENTE ===') 
+        cpf_busca = input('\nDigite o CPF do cliente a ser excluído: ')
+
+        tem_conta_ativa = False
+        for conta in lista_contas:
+            if conta.titular.cpf == cpf_busca:
+                tem_conta_ativa = True
+                break
+
+        if tem_conta_ativa:
+            print('\nNão é possível excluir o cliente. Ele possui contas ativas.')
+        else: 
+            for cliente in lista_clientes:
+                if cliente.cpf == cpf_busca:
+                    lista_clientes.remove(cliente)
+                    print('\nCliente excluído com sucesso!')
+                    break
+            else:
+                print('\nCliente não encontrado.')               
+
+    elif opcao == '14':
+        print('\n=== ENCERRAR CONTA ===')
+        numero_busca = input('\nDigite o número da conta a ser encerrada: ')
+
+        for conta in lista_contas:
+            if conta.numero == numero_busca:
+                senha_digitada = input('\nDigite a senha da conta: ')
+
+                if senha_digitada == conta.senha:
+                    if conta.saldo == 0:
+                        lista_contas.remove(conta)
+                        print(f'\nConta {conta.numero} encerrada com sucesso!')
+                    else:
+                        print('\nNão é possível encerrar a conta. O saldo deve ser zero.')
+                        print('\nVocê precisa zerar o saldo (SAQUE OU TRANSFIRA)')
+                else:
+                    print('\nAcesso negado: Senha incorreta.')
+                break
+        else:
+            print('\nConta não encontrada.')
+
+    elif opcao == '15':
+        print('\n=== BUSCAR CLIENTE ===')
+        cpf_busca = input('\nDigite o CPF do cliente que deseja buscar: ')
+
+        for cliente in lista_clientes:
+            if cliente.cpf == cpf_busca:
+                print(f'\n--- DADOS DO CLIENTE ---')
+                print(f'Nome: {cliente.nome}')
+                print(f'CPF: {cliente.cpf}')
+                print(f'Telefone: {cliente.telefone}')
+                print(f'Endereço: {cliente.endereco}')
+
+                print('\n--- CONTAS VINCULADAS ---')
+                contas_encontradas = 0
+
+                for conta in lista_contas:
+                    if conta.titular.cpf == cpf_busca:
+                        print(f'\nAgência: {conta.agencia.numero} | Conta: {conta.numero} | Saldo: R$ {conta.saldo:.2f}')
+                        contas_encontradas += 1
+
+                if contas_encontradas == 0:
+                    print('\nO cliente não possui contas ativas no momento.')
+
+                break
+        else:
+            print('\nCliente não encontrado.')
+    
+    elif opcao == '0':
+        print('\nSalvando dados do sistema...')
+
+        cliente_para_salvar = []
+        for cliente in lista_clientes:
+            cliente_para_salvar.append([cliente.nome, cliente.cpf, cliente.telefone, cliente.endereco])
+
+        agencia_para_salvar = []
+        for agencia in lista_agencias:
+            agencia_para_salvar.append([agencia.numero, agencia.nome])
+
+        conta_para_salvar = []
+        for conta in lista_contas:
+            conta_para_salvar.append([conta.numero, conta.titular.cpf, conta.agencia.numero, conta.senha, conta.saldo])
+
+        pacote_final = [cliente_para_salvar, agencia_para_salvar, conta_para_salvar]
+
+        with open('dados_bancos.json', 'w') as arquivo:
+            json.dump(pacote_final, arquivo)
+
+        print('\nDados salvos com sucesso!')
+        break
+
+    
+        
+
