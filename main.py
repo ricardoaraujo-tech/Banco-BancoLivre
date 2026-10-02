@@ -3,6 +3,11 @@ from cliente import Cliente
 from conta import Conta
 from agencia import Agencia
 
+def Validar_cpf(cpf):
+    if len(cpf) < 11 or len(cpf) > 11:
+        return "Cpf inválido, deixe em 11 digitos"
+    return cpf
+
 clientes = {}
 agencias = {}
 contas = {}
@@ -58,11 +63,18 @@ while True:
     print('======================')
 
     opcao = input('\nEscolha uma opção: ')
-
+    
     if opcao == '1':
         print('\n=== CADASTRO DE CLIENTE ===')
         nome = input('\nDigite o nome do cliente: ')
-        cpf = input('Digite o CPF do cliente: ')
+
+        while True: 
+        cpf_digitado = input('Digite o CPF do cliente: ')
+        cpf = Validar_cpf(cpf_digitado)
+        if cpf == "Cpf inválido, deixe em 11 digitos":
+                print(cpf)
+            else:
+                break
         telefone = input('Digite o telefone do cliente: ')
         endereco = input('Digite o endereço do cliente: ')
 
