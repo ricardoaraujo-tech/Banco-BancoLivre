@@ -4,9 +4,27 @@ from conta import Conta
 from agencia import Agencia
 
 def Validar_cpf(cpf):
-    if len(cpf) < 11 or len(cpf) > 11:
+    if len(cpf) < 11 or len(cpf) > 11:   # checa se o CPF é válido
         return "Cpf inválido, deixe em 11 digitos"
     return cpf
+
+def buscar_por_cpf(cpf, clientes, contas):
+    if cpf in clientes:  # checa se o CPF está no dicionário dos clientes 
+        cliente = clientes[cpf]
+        print(f'Nome: {cliente.nome}')
+        print(f'CPF: {cliente.cpf}')
+        print(f'Telefone: {cliente.telefone}')
+        print(f'Endereço: {cliente.endereco}')
+        contas_encontradas = 0
+        for conta in contas.values(): # A função percorre todas as contas cadastradas no sistema procurando por aquelas cujo titular tenha o mesmo CPF que está sendo buscado
+            if conta.titular.cpf == cpf:
+                print(f'Agência: {conta.agencia.numero} | Conta: {conta.numero} | Saldo: R$ {conta.saldo:.2f}')
+                contas_encontradas += 1
+
+        if contas_encontradas == 0:
+            print('O cliente não possui contas ativas no momento.')
+    else:
+        print('Cliente não encontrado.')
 
 clientes = {}
 agencias = {}
