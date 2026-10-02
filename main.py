@@ -11,24 +11,24 @@ try:
     with open('dados_bancos.json', 'r') as arquivo:
         dados_salvos = json.load(arquivo)
 
-        for cliente_data in dados_salvos[0]:
-            c = Cliente(cliente_data[0], cliente_data[1], cliente_data[2], cliente_data[3])
+        for cliente_data in dados_salvos.get("clientes", []):
+            c = Cliente(cliente_data["nome"], cliente_data["cpf"], cliente_data["telefone"], cliente_data["endereco"])
             clientes[c.cpf] = c
 
-        for agencia_data in dados_salvos[1]:
-            a = Agencia(agencia_data[0], agencia_data[1])
+        for agencia_data in dados_salvos.get("agencias", []):
+            a = Agencia(agencia_data["numero"], agencia_data["nome"])
             agencias[a.numero] = a
 
-        for conta_data in dados_salvos[2]:
-            cpf_titular = conta_data[1]
-            num_agencia = conta_data[2]
+        for conta_data in dados_salvos.get("contas", []):
+            cpf_titular = conta_data["cpf_titular"]
+            num_agencia = conta_data["num_agencia"]
 
             if cpf_titular in clientes and num_agencia in agencias:
                 cliente_vinculado = clientes[cpf_titular]
                 agencia_vinculada = agencias[num_agencia]
 
-                conta_restaurada = Conta(conta_data[0], cliente_vinculado, agencia_vinculada, conta_data[3])
-                conta_restaurada.saldo = conta_data[4]
+                conta_restaurada = Conta(conta_data["numero"], cliente_vinculado, agencia_vinculada, conta_data["senha"])
+                conta_restaurada.saldo = conta_data["saldo"]
                 contas[conta_restaurada.numero] = conta_restaurada
 
 except FileNotFoundError:
@@ -183,7 +183,7 @@ while True:
                 print('\nConta de destino não encontrada.')
         else:
             print('\nConta de origem não encontrada.')            
-                   
+                     
     elif opcao == '10':
         print('\n=== CONSULTA DE SALDO ===')
         numero_conta = input('\nDigite o número da conta: ')
@@ -261,7 +261,7 @@ while True:
                 del clientes[cpf_busca]
                 print('\nCliente excluído com sucesso!')
             else:
-                print('\nCliente não encontrado.')               
+                print('\nCliente não encontrado.')                
 
     elif opcao == '14':
         print('\n=== ENCERRAR CONTA ===')
@@ -313,21 +313,38 @@ while True:
 
         cliente_para_salvar = []
         for cliente in clientes.values():
-            cliente_para_salvar.append([cliente.nome, cliente.cpf, cliente.telefone, cliente.endereco])
+            cliente_para_salvar.append({
+                "nome": cliente.nome,
+                "cpf": cliente.cpf,
+                "telefone": cliente.telefone,
+                "endereco": cliente.endereco
+            })
 
         agencia_para_salvar = []
         for agencia in agencias.values():
-            agencia_para_salvar.append([agencia.numero, agencia.nome])
+            agencia_para_salvar.append({
+                "numero": agencia.numero,
+                "nome": agencia.nome
+            })
 
         conta_para_salvar = []
         for conta in contas.values():
-            conta_para_salvar.append([conta.numero, conta.titular.cpf, conta.agencia.numero, conta.senha, conta.saldo])
+            conta_para_salvar.append({
+                "numero": conta.numero,
+                "cpf_titular": conta.titular.cpf,
+                "num_agencia": conta.agencia.numero,
+                "senha": conta.senha,
+                "saldo": conta.saldo
+            })
 
-        pacote_final = [cliente_para_salvar, agencia_para_salvar, conta_para_salvar]
+        pacote_final = {
+            "clientes": cliente_para_salvar,
+            "agencias": agencia_para_salvar,
+            "contas": conta_para_salvar
+        }
 
         with open('dados_bancos.json', 'w') as arquivo:
             json.dump(pacote_final, arquivo)
 
         print('\nDados salvos com sucesso!')
         break
-
