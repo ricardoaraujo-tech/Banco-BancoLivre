@@ -28,3 +28,4 @@ class Cliente:
         self.cpf = cpf
         self.telefone = telefone
         self.endereco = endereco
+
