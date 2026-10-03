@@ -1,11 +1,12 @@
 
 
 class Conta:
-    def __init__(self, numero, titular, agencia, senha):
+    def __init__(self, numero, titular, agencia, senha, tipo):
       self.numero = numero
       self.titular = titular
       self.agencia = agencia
       self.senha = senha
+      self.tipo = tipo
       self.saldo = 0.0
 
     def depositar(self, valor):
