@@ -1,14 +1,15 @@
 import json
-from cliente import Cliente, validar_cpf
-from conta import Conta
-from agencia import Agencia
+from functools import reduce
+from models.cliente import Cliente, validar_cpf
+from models.conta import Conta
+from models.agencia import Agencia
 
 clientes = {}
 agencias = {}
 contas = {}
 
 try: 
-    with open('dados_bancos.json', 'r') as arquivo:
+    with open('data/dados_bancos.json', 'r') as arquivo:
         dados_salvos = json.load(arquivo)
 
         for cliente_data in dados_salvos.get("clientes", []):
@@ -49,12 +50,14 @@ while True:
     print('Sacar (8)')
     print('Transferir (9)')
     print('Consultar Saldo (10)')
-    print('Relatorio do Banco (11)')
+    print('Relatório do Banco (11)')
     print('Editar Cliente (12)')
     print('Excluir Cliente (13)')
     print('Encerrar Contas (14)')
     print('Buscar Cliente (15)')
     print('Buscar Conta (16)')
+    print('Listar Contas com Saldo Positivo (17)') # Nova opção adicionada
+    print('Dashboard Financeiro do Banco (18)')     # Nova opção adicionada
     print('Sair (0)')
     print('======================')
 
@@ -89,7 +92,7 @@ while True:
 
     elif opcao == '3':
         print('\n=== CADASTRO DE CONTA ===')
-        titular_cpf = input('\nDigite o CPF do titular da conta: ')
+        titular_cpf = input('\nDigite o CPF titular da conta: ')
 
         if titular_cpf in clientes:
             cliente_encontrado = clientes[titular_cpf]
@@ -137,16 +140,16 @@ while True:
         if not clientes:
             print('\nNenhum cliente cadastrado.')
         else:
-            for cliente in clientes.values():
-                print(f'\nNome: {cliente.nome}, CPF: {cliente.cpf}, Telefone: {cliente.telefone}, Endereço: {cliente.endereco}')
+            # Uso de map e lambda para listar clientes
+            list(map(lambda c: print(f'\nNome: {c.nome}, CPF: {c.cpf}, Telefone: {c.telefone}, Endereço: {c.endereco}'), clientes.values()))
 
     elif opcao == '5':
         print('\n=== LISTA DE AGÊNCIAS ===')
         if not agencias:
             print('\nNenhuma agência cadastrada.')
         else:
-            for agencia in agencias.values():
-                print(f'\nNúmero: {agencia.numero}, Nome: {agencia.nome}')
+            # Uso de map e lambda para listar agências
+            list(map(lambda a: print(f'\nNúmero: {a.numero}, Nome: {a.nome}'), agencias.values()))
 
     elif opcao == '6':
         print('\n=== LISTA DE CONTAS ===')
@@ -231,19 +234,16 @@ while True:
     elif opcao == '11':
         print('\n=== RELATÓRIO DO BANCO ===')
 
-        total_banco = 0.0
-        for conta in contas.values():
-            total_banco += conta.saldo
+            # Soma o saldo total usando list comprehension
+        total_banco = sum([conta.saldo for conta in contas.values()])
         print(f'\nMontante total do banco: R${total_banco:.2f}')    
 
         numero_agencia = input('\nDigite o número da agência para consultar o montante: ')
 
         if numero_agencia in agencias:
             agencia = agencias[numero_agencia]
-            total_agencia = 0.0
-            for conta in contas.values():
-                if conta.agencia.numero == agencia.numero:
-                    total_agencia += conta.saldo
+            # Soma o saldo da agência específica usando list comprehension filtrada
+            total_agencia = sum([c.saldo for c in contas.values() if c.agencia.numero == agencia.numero])
             print(f'\nMontante total da agência {agencia.nome} (Número: {agencia.numero}): R${total_agencia:.2f}')
         else:
             print('\nAgência não encontrada.')
@@ -276,11 +276,8 @@ while True:
         print('\n=== EXCLUIR CLIENTE ===') 
         cpf_busca = input('\nDigite o CPF do cliente a ser excluído: ')
 
-        tem_conta_ativa = False
-        for conta in contas.values():
-            if conta.titular.cpf == cpf_busca:
-                tem_conta_ativa = True
-                break
+            # Verifica contas ativas usando list comprehension e any()
+        tem_conta_ativa = any([conta.titular.cpf == cpf_busca for conta in contas.values()])
 
         if tem_conta_ativa:
             print('\nNão é possível excluir o cliente. Ele possui contas ativas.')
@@ -324,15 +321,14 @@ while True:
             print(f'Endereço: {cliente.endereco}')
 
             print('\n--- CONTAS VINCULADAS ---')
-            contas_encontradas = 0
+            # Filtra contas do cliente usando list comprehension
+            contas_cliente = [c for c in contas.values() if c.titular.cpf == cpf_busca]
 
-            for conta in contas.values():
-                if conta.titular.cpf == cpf_busca:
-                    print(f'\nAgência: {conta.agencia.numero} | Conta: {conta.numero} | Saldo: R$ {conta.saldo:.2f}')
-                    contas_encontradas += 1
-
-            if contas_encontradas == 0:
+            if not contas_cliente:
                 print('\nO cliente não possui contas ativas no momento.')
+            else:
+                for conta in contas_cliente:
+                    print(f'\nAgência: {conta.agencia.numero} | Conta: {conta.numero} | Saldo: R$ {conta.saldo:.2f}')
         else:
             print('\nCliente não encontrado.')
 
@@ -349,6 +345,48 @@ while True:
             print(f'Saldo: R$ {conta.saldo:.2f}')
         else:
             print('\nConta não encontrada.')
+
+    # Bloco novo para listar contas com saldo positivo usando list comprehension
+    elif opcao == '17':
+        print('\n=== CONTAS COM SALDO POSITIVO ===')
+        if not contas:
+            print('\nNenhuma conta cadastrada.')
+        else:
+            contas_positivas = [c for c in contas.values() if c.saldo > 0]
+            
+            if not contas_positivas:
+                print('\nNão há contas com saldo positivo.')
+            else:
+                for conta in contas_positivas:
+                    print(f'\nConta: {conta.numero} | Titular: {conta.titular.nome} | Saldo: R$ {conta.saldo:.2f}')
+
+    # Bloco novo do Dashboard Financeiro calculando totais, médias, maior e menor saldo
+    elif opcao == '18':
+        print('\nDASHBOARD DE ANÁLISE FINANCEIRA')
+        
+        num_clientes = len(clientes)
+        num_contas = len(contas)
+        
+        saldo_total = sum([c.saldo for c in contas.values()])
+        saldo_medio = (saldo_total / num_contas) if num_contas > 0 else 0.0
+        
+        maior_conta = max(contas.values(), key=lambda c: c.saldo) if contas else None
+        menor_conta = min(contas.values(), key=lambda c: c.saldo) if contas else None
+
+        print(f' Número total de clientes: {num_clientes}')
+        print(f' Número total de contas: {num_contas}')
+        print(f' Saldo total do banco: R$ {saldo_total:.2f}')
+        print(f' Saldo médio das contas: R$ {saldo_medio:.2f}')
+        
+        if maior_conta:
+            print(f' Maior saldo: R$ {maior_conta.saldo:.2f} (Titular: {maior_conta.titular.nome})')
+        else:
+            print(' Maior saldo: N/A')
+            
+        if menor_conta:
+            print(f' Menor saldo: R$ {menor_conta.saldo:.2f} (Titular: {menor_conta.titular.nome})')
+        else:
+            print(' Menor saldo: N/A')
 
     elif opcao == '0':
         print('\nSalvando dados do sistema...')
@@ -386,7 +424,7 @@ while True:
             "contas": conta_para_salvar
         }
 
-        with open('dados_bancos.json', 'w') as arquivo:
+        with open('data/dados_bancos.json', 'w') as arquivo:
             json.dump(pacote_final, arquivo)
 
         print('\nDados salvos com sucesso!')

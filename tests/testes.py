@@ -1,6 +1,6 @@
 from hypothesis import given, strategies as st
-from cliente import validar_cpf
-from conta import Conta
+from models.cliente import validar_cpf
+from models.conta import Conta
 
 # Teste 1: Depósitos positivos devem sempre retornar True e somar ao saldo exato
 @given(st.floats(min_value=0.01, max_value=10000.0, allow_nan=False, allow_infinity=False))
@@ -12,11 +12,12 @@ def test_propriedade_deposito_positivo(valor):
     assert conta.saldo == saldo_inicial + valor
 
 # Teste 2: CPFs formados pelo mesmo dígito repetido 11 vezes devem sempre retornar False
+@given(st.integers(min_value=0, max_value=9))
 def test_propriedade_cpf_digitos_repetido(digito):
     cpf_repetido = str(digito) * 11
     assert validar_cpf(cpf_repetido) == False
 if __name__ == "__main__":
     test_propriedade_deposito_positivo()
-    test_propriedade_cpf_digitos_repetido(0)
+    test_propriedade_cpf_digitos_repetido()
     print("Todos os testes de propriedade passaram com sucesso!")
     

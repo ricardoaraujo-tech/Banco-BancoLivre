@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastrar Conta - Banco Livre</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <div class="container">
+        <h1>Banco Livre</h1>
+        <p class="subtitle">Abertura de Nova Conta</p>
+
+        <div class="card">
+            <h2>Formulário de Abertura de Conta</h2>
+            
+            {% if erro %}
+                <div style="background-color: #fee2e2; color: #b91c1c; padding: 10px; border-radius: 4px; margin-bottom: 15px;">
+                    <strong>Erro:</strong> {{ erro }}
+                </div>
+            {% endif %}
+
+            <form action="{{ url_for('cadastrar_conta') }}" method="POST">
+                <div class="form-group">
+                    <label for="cpf_titular">O seu CPF (Titular):</label>
+                    <input type="text" id="cpf_titular" name="cpf_titular" placeholder="Digite o seu CPF já cadastrado" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="num_agencia">Selecione a Agência:</label>
+                    <select id="num_agencia" name="num_agencia" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                        <option value="">-- Escolha uma agência --</option>
+                        {% for agencia in agencias %}
+                            <option value="{{ agencia.numero }}">{{ agencia.nome }} (Nº {{ agencia.numero }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="tipo">Tipo de Conta:</label>
+                    <select id="tipo" name="tipo" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                        <option value="Conta Corrente">Conta Corrente</option>
+                        <option value="Conta Poupança">Conta Poupança</option>
+                        <option value="Conta Salário">Conta Salário</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="numero">Número da Conta:</label>
+                    <input type="text" id="numero" name="numero" placeholder="Ex: 015" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="senha">Senha de Acesso:</label>
+                    <input type="password" id="senha" name="senha" placeholder="Crie uma senha numérica ou texto" required>
+                </div>
+
+                <button type="submit" class="btn-primary">Abrir Conta</button>
+                <a href="{{ url_for('index') }}" style="margin-left: 10px; text-decoration: none; color: #666;">Cancelar e Voltar</a>
+            </form>
+        </div>
+    </div>
+
+</body>
+</html>

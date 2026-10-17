@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banco Livre - Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <div class="container">
+        <h1>Banco Livre</h1>
+        <p class="subtitle">Painel de Administração Financeira</p>
+        
+        <!-- Menu de Navegação -->
+        <div style="margin-bottom: 20px;">
+            <a href="{{ url_for('cadastrar_cliente') }}" class="btn-primary" style="text-decoration: none; display: inline-block;">+ Cadastrar Novo Cliente</a>
+            <a href="{{ url_for('cadastrar_conta') }}" class="btn-primary" style="text-decoration: none; display: inline-block; margin-left: 10px;">+ Cadastrar Nova Conta</a>
+        </div>
+
+        <!-- Dashboard Financeiro -->
+        <div class="card">
+            <h2>Dashboard Financeiro</h2>
+            <ul>
+                <li><strong>Total de Clientes:</strong> {{ dashboard.num_clientes }}</li>
+                <li><strong>Total de Contas:</strong> {{ dashboard.num_contas }}</li>
+                <li><strong>Saldo Total do Banco:</strong> R$ {{ "%.2f"|format(dashboard.saldo_total) }}</li>
+                <li><strong>Saldo Médio:</strong> R$ {{ "%.2f"|format(dashboard.saldo_medio) }}</li>
+                {% if dashboard.maior_conta %}
+                    <li><strong>Maior Saldo:</strong> R$ {{ "%.2f"|format(dashboard.maior_conta.saldo) }} (CPF: {{ dashboard.maior_conta.cpf_titular }})</li>
+                    <li><strong>Menor Saldo:</strong> R$ {{ "%.2f"|format(dashboard.menor_conta.saldo) }} (CPF: {{ dashboard.menor_conta.cpf_titular }})</li>
+                {% endif %}
+            </ul>
+        </div>
+
+        <!-- Lista de Clientes -->
+        <div class="card">
+            <h2>Clientes Cadastrados</h2>
+            {% if clientes %}
+                <table>
+                    <thead>
+                        <tr><th>Nome</th><th>CPF</th><th>Telefone</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for cliente in clientes %}
+                            <tr>
+                                <td>{{ cliente.nome }}</td>
+                                <td>{{ cliente.cpf }}</td>
+                                <td>{{ cliente.telefone }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p class="empty-msg">Nenhum cliente cadastrado ainda.</p>
+            {% endif %}
+        </div>
+
+        <!-- Lista de Contas Positivas -->
+        <div class="card">
+            <h2>Contas com Saldo Positivo</h2>
+            {% if contas_positivas %}
+                <table>
+                    <thead>
+                        <tr><th>Conta</th><th>Agência</th><th>CPF Titular</th><th>Saldo</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for conta in contas_positivas %}
+                            <tr>
+                                <td>{{ conta.numero }}</td>
+                                <td>{{ conta.num_agencia }}</td>
+                                <td>{{ conta.cpf_titular }}</td>
+                                <td>R$ {{ "%.2f"|format(conta.saldo) }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p class="empty-msg">Nenhuma conta com saldo positivo.</p>
+            {% endif %}
+        </div>
+
+    </div>
+
+</body>
+</html>
