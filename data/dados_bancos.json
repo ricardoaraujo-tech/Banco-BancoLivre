@@ -2,13 +2,13 @@
     "clientes": [
         {
             "nome": "Pedro",
-            "cpf": "08778692512",
+            "cpf": "38982424717",
             "telefone": "79999991111",
             "endereco": "Rua UFS"
         },
         {
             "nome": "Maria Clara Regi Sant Vi",
-            "cpf": "05002677584",
+            "cpf": "76532929760",
             "telefone": "79999994444",
             "endereco": "RUA 6"
         }
@@ -22,7 +22,7 @@
     "contas": [
         {
             "numero": "012",
-            "cpf_titular": "08778692512",
+            "cpf_titular": "38982424717",
             "num_agencia": "100",
             "senha": "1234",
             "saldo": 630.0,
@@ -30,7 +30,7 @@
         },
         {
             "numero": "014",
-            "cpf_titular": "05002677584",
+            "cpf_titular": "76532929760",
             "num_agencia": "100",
             "senha": "1234",
             "saldo": 10500.0,
@@ -38,7 +38,7 @@
         },
         {
             "numero": "132",
-            "cpf_titular": "08778623314",
+            "cpf_titular": "38982424717",
             "num_agencia": "100",
             "senha": "12345",
             "saldo": 0.0,
