@@ -13,9 +13,11 @@
         <p class="subtitle">Painel de Administração Financeira</p>
         
         <!-- Menu de Navegação -->
-        <div style="margin-bottom: 20px;">
-            <a href="{{ url_for('cadastrar_cliente') }}" class="btn-primary" style="text-decoration: none; display: inline-block;">+ Cadastrar Novo Cliente</a>
-            <a href="{{ url_for('cadastrar_conta') }}" class="btn-primary" style="text-decoration: none; display: inline-block; margin-left: 10px;">+ Cadastrar Nova Conta</a>
+        <div style="margin-bottom: 25px; display: flex; flex-wrap: wrap; gap: 12px;">
+            <a href="{{ url_for('cadastrar_cliente') }}" class="btn-primary" style="text-decoration: none;">+ Cadastrar Novo Cliente</a>
+            <a href="{{ url_for('cadastrar_agencia') }}" class="btn-primary" style="text-decoration: none;">+ Cadastrar Nova Agência</a>
+            <a href="{{ url_for('cadastrar_conta') }}" class="btn-primary" style="text-decoration: none;">+ Cadastrar Nova Conta</a>
+            <a href="{{ url_for('operacoes') }}" class="btn-primary" style="text-decoration: none; background-color: #059669;">$ Caixa Automático</a>
         </div>
 
         <!-- Dashboard Financeiro -->
@@ -33,13 +35,27 @@
             </ul>
         </div>
 
+        <!-- Barra de Pesquisa -->
+        <div class="card" style="background-color: #f8fafc; border: 1px solid #cbd5e1; padding: 15px;">
+            <form action="{{ url_for('index') }}" method="GET" style="display: flex; gap: 10px; align-items: center; margin: 0;">
+                <label for="busca" style="font-weight: bold; margin: 0; color: #1e3a8a;">Buscar:</label>
+                <input type="text" id="busca" name="busca" value="{{ termo_busca }}" placeholder="Digite Nome, CPF ou Nº da Conta..." style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                <button type="submit" class="btn-primary">Pesquisar</button>
+                
+                <!-- Botão Limpar -->
+                {% if termo_busca %}
+                    <a href="{{ url_for('index') }}" class="btn-danger" style="text-decoration: none; padding: 9px 15px; border-radius: 4px;">Limpar</a>
+                {% endif %}
+            </form>
+        </div>
+        
         <!-- Lista de Clientes -->
         <div class="card">
             <h2>Clientes Cadastrados</h2>
             {% if clientes %}
                 <table>
                     <thead>
-                        <tr><th>Nome</th><th>CPF</th><th>Telefone</th></tr>
+                        <tr><th>Nome</th><th>CPF</th><th>Telefone</th><th>Ações</th></tr>
                     </thead>
                     <tbody>
                         {% for cliente in clientes %}
@@ -47,6 +63,12 @@
                                 <td>{{ cliente.nome }}</td>
                                 <td>{{ cliente.cpf }}</td>
                                 <td>{{ cliente.telefone }}</td>
+                                <td>
+                                    <a href="{{ url_for('editar_cliente', cpf=cliente.cpf) }}" class="btn-primary" style="text-decoration: none; padding: 5px 10px; font-size: 0.85rem; background-color: #eab308; color: black; margin-right: 5px;">Editar</a>
+                                    <form action="{{ url_for('excluir_cliente', cpf=cliente.cpf) }}" method="POST" style="display:inline;">
+                                        <button type="submit" class="btn-danger" onclick="return confirm('Tem a certeza que deseja excluir este cliente? Todas as contas dele serão encerradas.');">Excluir</button>
+                                    </form>
+                                </td>
                             </tr>
                         {% endfor %}
                     </tbody>
@@ -62,7 +84,7 @@
             {% if contas_positivas %}
                 <table>
                     <thead>
-                        <tr><th>Conta</th><th>Agência</th><th>CPF Titular</th><th>Saldo</th></tr>
+                        <tr><th>Conta</th><th>Agência</th><th>CPF Titular</th><th>Saldo</th><th>Ações</th></tr>
                     </thead>
                     <tbody>
                         {% for conta in contas_positivas %}
@@ -71,6 +93,11 @@
                                 <td>{{ conta.num_agencia }}</td>
                                 <td>{{ conta.cpf_titular }}</td>
                                 <td>R$ {{ "%.2f"|format(conta.saldo) }}</td>
+                                <td>
+                                    <form action="{{ url_for('encerrar_conta', numero=conta.numero) }}" method="POST" style="display:inline;">
+                                        <button type="submit" class="btn-danger" onclick="return confirm('Tem a certeza que deseja encerrar esta conta permanentemente?');">Encerrar</button>
+                                    </form>
+                                </td>
                             </tr>
                         {% endfor %}
                     </tbody>

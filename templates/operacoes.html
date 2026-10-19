@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caixa Automático - Banco Livre</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <div class="container">
+        <h1>Banco Livre</h1>
+        <p class="subtitle">Caixa Automático (Operações Financeiras)</p>
+
+        <div class="card">
+            <h2>Efetuar Operação</h2>
+            
+            {% if erro %}
+                <div style="background-color: #fee2e2; color: #b91c1c; padding: 10px; border-radius: 4px; margin-bottom: 15px;">
+                    <strong>Atenção:</strong> {{ erro }}
+                </div>
+            {% endif %}
+            
+            {% if sucesso %}
+                <div style="background-color: #dcfce3; color: #15803d; padding: 10px; border-radius: 4px; margin-bottom: 15px;">
+                    <strong>Sucesso:</strong> {{ sucesso }}
+                </div>
+            {% endif %}
+
+            <form action="{{ url_for('operacoes') }}" method="POST">
+                <div class="form-group">
+                    <label for="numero_conta">A sua Conta:</label>
+                    <input type="text" id="numero_conta" name="numero_conta" placeholder="Digite o número da sua conta" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="senha">Senha:</label>
+                    <input type="password" id="senha" name="senha" placeholder="Digite a sua senha" required>
+                </div>
+
+                <hr style="border: 1px solid #e2e8f0; margin: 20px 0;">
+
+                <div class="form-group">
+                    <label for="tipo_operacao">O que deseja fazer?</label>
+                    <select id="tipo_operacao" name="tipo_operacao" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                        <option value="saldo">Consultar Saldo</option>
+                        <option value="depositar">Depositar Dinheiro</option>
+                        <option value="sacar">Sacar Dinheiro</option>
+                        <option value="transferir">Transferir para outra conta</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="valor">Valor (R$):</label>
+                    <input type="number" id="valor" name="valor" step="0.01" min="0" placeholder="0.00 (Obrigatório para saques, depósitos e transferências)">
+                </div>
+
+                <div class="form-group">
+                    <label for="conta_destino">Conta de Destino (Apenas para Transferências):</label>
+                    <input type="text" id="conta_destino" name="conta_destino" placeholder="Nº da conta que vai receber o dinheiro">
+                </div>
+
+                <button type="submit" class="btn-primary" style="background-color: #059669;">Confirmar Operação</button>
+                <a href="{{ url_for('index') }}" style="margin-left: 10px; text-decoration: none; color: #666;">Voltar ao Início</a>
+            </form>
+        </div>
+    </div>
+
+</body>
+</html>

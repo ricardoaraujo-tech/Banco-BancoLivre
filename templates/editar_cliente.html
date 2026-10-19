@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Cliente - Banco Livre</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <div class="container">
+        <h1>Banco Livre</h1>
+        <p class="subtitle">Atualização Cadastral</p>
+
+        <div class="card">
+            <h2>Editar Dados de: {{ cliente.nome }}</h2>
+            
+            <form action="{{ url_for('editar_cliente', cpf=cliente.cpf) }}" method="POST">
+                
+                <div class="form-group">
+                    <label for="cpf">CPF (Não pode ser alterado):</label>
+                    <input type="text" id="cpf" name="cpf" value="{{ cliente.cpf }}" readonly style="background-color: #f1f5f9; color: #64748b;">
+                </div>
+
+                <div class="form-group">
+                    <label for="nome">Nome Completo:</label>
+                    <input type="text" id="nome" name="nome" value="{{ cliente.nome }}" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="telefone">Telefone:</label>
+                    <input type="text" id="telefone" name="telefone" value="{{ cliente.telefone }}" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="endereco">Endereço:</label>
+                    <input type="text" id="endereco" name="endereco" value="{{ cliente.endereco }}" required>
+                </div>
+
+                <button type="submit" class="btn-primary" style="background-color: #eab308; color: black;">Atualizar Cliente</button>
+                <a href="{{ url_for('index') }}" style="margin-left: 10px; text-decoration: none; color: #666;">Cancelar e Voltar</a>
+            </form>
+        </div>
+    </div>
+
+</body>
+</html>
