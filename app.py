@@ -1,29 +1,129 @@
 import json
 import os
-from flask import Flask, render_template, request, redirect, url_for
+from dataclasses import asdict, dataclass, field
+from typing import List, Optional
+
+from flask import Flask, redirect, render_template, request, url_for
+
 from models.cliente import validar_cpf
 
 app = Flask(__name__)
+CAMINHO_ARQUIVO_DADOS = 'data/dados_bancos.json'
+@dataclass
+class Cliente:
+    nome: str
+    cpf: str
+    telefone: str
+    endereco: str
+    @classmethod
+    def de_dicionario(cls, dados_cliente: dict) -> 'Cliente':
+        return cls(
+            nome=dados_cliente.get('nome', ''),
+            cpf=dados_cliente.get('cpf', ''),
+            telefone=dados_cliente.get('telefone', ''),
+            endereco=dados_cliente.get('endereco', '')
+        )
+    def para_dicionario(self) -> dict:
+        return asdict(self)
+@dataclass
+class Agencia:
+    numero: str
+    nome: str
+    endereco: str
 
-arquivo_dados = 'data/dados_bancos.json'
+    @classmethod
+    def de_dicionario(cls, dados_agencia: dict) -> 'Agencia':
+        return cls(
+            numero=dados_agencia.get('numero', ''),
+            nome=dados_agencia.get('nome', ''),
+            endereco=dados_agencia.get('endereco', '')
+        )
+    def para_dicionario(self) -> dict:
+        return asdict(self)
+@dataclass
+class Conta:
+    numero: str
+    cpf_titular: str
+    num_agencia: str
+    senha: str
+    saldo: float = 0.0
+    tipo: str = ''
+    @classmethod
+    def de_dicionario(cls, dados_conta: dict) -> 'Conta':
+        return cls(
+            numero=dados_conta.get('numero', ''),
+            cpf_titular=dados_conta.get('cpf_titular', ''),
+            num_agencia=dados_conta.get('num_agencia', ''),
+            senha=str(dados_conta.get('senha', '')),
+            saldo=float(dados_conta.get('saldo', 0.0)),
+            tipo=dados_conta.get('tipo', '')
+        )
+    def para_dicionario(self) -> dict:
+        return asdict(self)
 
-def carregar_dados():
-    if os.path.exists(arquivo_dados):
-        with open(arquivo_dados, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return {'clientes': [], 'agencias': [], 'contas': []}
+    def depositar(self, valor: float) -> None:
+        self.saldo += valor
 
-def salvar_dados(dados):
-    with open(arquivo_dados, 'w', encoding='utf-8') as f:
-        json.dump(dados, f, indent=4, ensure_ascii=False)
+    def sacar(self, valor: float) -> None:
+        self.saldo -= valor
+@dataclass
+class DadosBancarios:
+    clientes: List[Cliente] = field(default_factory=list)
+    agencias: List[Agencia] = field(default_factory=list)
+    contas: List[Conta] = field(default_factory=list)
 
+    @classmethod
+    def de_dicionario(cls, dados: dict) -> 'DadosBancarios':
+        return cls(
+            clientes=[
+                Cliente.de_dicionario(dados_cliente)
+                for dados_cliente in dados.get('clientes', [])
+            ],
+            agencias=[
+                Agencia.de_dicionario(dados_agencia)
+                for dados_agencia in dados.get('agencias', [])
+            ],
+            contas=[
+                Conta.de_dicionario(dados_conta)
+                for dados_conta in dados.get('contas', [])
+            ]
+        )
+    def para_dicionario(self) -> dict:
+        return {
+            'clientes': [cliente.para_dicionario() for cliente in self.clientes],
+            'agencias': [agencia.para_dicionario() for agencia in self.agencias],
+            'contas': [conta.para_dicionario() for conta in self.contas]
+        }
+@dataclass
+class Dashboard:
+    num_clientes: int
+    num_contas: int
+    saldo_total: float
+    saldo_medio: float
+    maior_conta: Optional[Conta]
+    menor_conta: Optional[Conta]
+def carregar_dados() -> DadosBancarios:
+    if os.path.exists(CAMINHO_ARQUIVO_DADOS):
+        with open(CAMINHO_ARQUIVO_DADOS, 'r', encoding='utf-8') as arquivo_dados:
+            dados_json = json.load(arquivo_dados)
+            return DadosBancarios.de_dicionario(dados_json)
+
+    return DadosBancarios()
+def salvar_dados(dados_bancarios: DadosBancarios) -> None:
+    with open(CAMINHO_ARQUIVO_DADOS, 'w', encoding='utf-8') as arquivo_dados:
+        json.dump(
+            dados_bancarios.para_dicionario(),
+            arquivo_dados,
+            indent=4,
+            ensure_ascii=False
+        )
 @app.route('/')
 def index():
     """Página principal com Dashboard, Listagens e Sistema de Busca Unificada."""
-    dados = carregar_dados()
-    clientes = dados.get('clientes', [])
-    agencias = dados.get('agencias', [])
-    contas = dados.get('contas', [])
+    dados_bancarios = carregar_dados()
+    lista_clientes = dados_bancarios.clientes
+    lista_agencias = dados_bancarios.agencias
+    lista_contas = dados_bancarios.contas
 
     # 1. Captura o que o utilizador digitou na barra de pesquisa (se existir)
     termo_busca = request.args.get('busca', '').lower().strip()
@@ -31,257 +131,315 @@ def index():
     # 2. Se houver pesquisa, filtra as listas
     if termo_busca:
         # Filtra clientes se o nome ou CPF contiverem o termo
-        clientes = [c for c in clientes if termo_busca in c.get('nome', '').lower() or termo_busca in c.get('cpf', '')]
+        lista_clientes = [
+            cliente for cliente in lista_clientes
+            if termo_busca in cliente.nome.lower()
+            or termo_busca in cliente.cpf
+        ]
+
         # Filtra contas se o número da conta ou CPF do titular contiverem o termo
-        contas_filtradas = [c for c in contas if termo_busca in str(c.get('numero', '')) or termo_busca in c.get('cpf_titular', '')]
+        contas_filtradas = [
+            conta for conta in lista_contas
+            if termo_busca in str(conta.numero)
+            or termo_busca in conta.cpf_titular
+        ]
     else:
-        contas_filtradas = contas
+        contas_filtradas = lista_contas
 
-    contas_positivas = [c for c in contas_filtradas if c.get('saldo', 0) > 0]
+    contas_positivas = [
+        conta for conta in contas_filtradas
+        if conta.saldo > 0
+    ]
+    # 3. Matemática do Dashboard
+    quantidade_clientes = len(dados_bancarios.clientes)
+    quantidade_contas = len(dados_bancarios.contas)
+    saldo_total = sum(conta.saldo for conta in dados_bancarios.contas)
+    saldo_medio = (
+        saldo_total / quantidade_contas
+        if quantidade_contas > 0
+        else 0.0
+    )
 
-    # 3. Matemática do Dashboard 
-    num_clientes = len(dados.get('clientes', []))
-    num_contas = len(dados.get('contas', []))
-    saldo_total = sum(c.get('saldo', 0) for c in dados.get('contas', []))
-    saldo_medio = (saldo_total / num_contas) if num_contas > 0 else 0.0
-    
-    if dados.get('contas'):
-        maior_conta = max(dados.get('contas'), key=lambda c: c.get('saldo', 0))
-        menor_conta = min(dados.get('contas'), key=lambda c: c.get('saldo', 0))
+    if dados_bancarios.contas:
+        conta_com_maior_saldo = max(
+            dados_bancarios.contas,
+            key=lambda conta: conta.saldo
+        )
+        conta_com_menor_saldo = min(
+            dados_bancarios.contas,
+            key=lambda conta: conta.saldo
+        )
     else:
-        maior_conta = None
-        menor_conta = None
-
-    dashboard = {
-        'num_clientes': num_clientes,
-        'num_contas': num_contas,
-        'saldo_total': saldo_total,
-        'saldo_medio': saldo_medio,
-        'maior_conta': maior_conta,
-        'menor_conta': menor_conta
-    }
-
-    return render_template('index.html', 
-                           clientes=clientes, 
-                           agencias=agencias, 
-                           contas_positivas=contas_positivas, 
-                           dashboard=dashboard,
-                           termo_busca=termo_busca)
-
+        conta_com_maior_saldo = None
+        conta_com_menor_saldo = None
+    dashboard = Dashboard(
+        num_clientes=quantidade_clientes,
+        num_contas=quantidade_contas,
+        saldo_total=saldo_total,
+        saldo_medio=saldo_medio,
+        maior_conta=conta_com_maior_saldo,
+        menor_conta=conta_com_menor_saldo
+    )
+    return render_template(
+        'index.html',
+        clientes=lista_clientes,
+        agencias=lista_agencias,
+        contas_positivas=contas_positivas,
+        dashboard=dashboard,
+        termo_busca=termo_busca
+    )
 @app.route('/cadastrar_cliente', methods=['GET', 'POST'])
 def cadastrar_cliente():
     if request.method == 'POST':
-        nome = request.form.get('nome')
-        cpf_digitado = request.form.get('cpf')
-        telefone = request.form.get('telefone')
-        endereco = request.form.get('endereco')
+        nome_cliente = request.form.get('nome', '')
+        cpf_digitado = request.form.get('cpf', '')
+        telefone_cliente = request.form.get('telefone', '')
+        endereco_cliente = request.form.get('endereco', '')
 
         if not validar_cpf(cpf_digitado):
-            return render_template('cadastrar_cliente.html', erro="CPF inválido. Veriique o formato e tente novamente.")
+            return render_template(
+                'cadastrar_cliente.html',
+                erro='CPF inválido. Verifique o formato e tente novamente.'
+            )
+        cpf_cliente = ''.join(filter(str.isdigit, cpf_digitado))
+        dados_bancarios = carregar_dados()
 
-        cpf = ''.join(filter(str.isdigit, cpf_digitado))
-        dados = carregar_dados()
+        if any(
+            cliente.cpf == cpf_cliente
+            for cliente in dados_bancarios.clientes
+        ):
+            return render_template(
+                'cadastrar_cliente.html',
+                erro='CPF já cadastrado.'
+            )
+        novo_cliente = Cliente(
+            nome=nome_cliente,
+            cpf=cpf_cliente,
+            telefone=telefone_cliente,
+            endereco=endereco_cliente
+        )
+        dados_bancarios.clientes.append(novo_cliente)
+        salvar_dados(dados_bancarios)
 
-        if any(c.get('cpf') == cpf for c in dados.get('clientes', [])):
-            return render_template('cadastrar_cliente.html', erro="CPF já cadastrado.")
-
-        novo_cliente = {
-            'nome': nome,
-            'cpf': cpf,
-            'telefone': telefone,
-            'endereco': endereco
-        }
-
-        dados.setdefault('clientes', []).append(novo_cliente)
-        salvar_dados(dados)
-
-        return redirect(url_for('index'))
-
+       return redirect(url_for('index'))
     return render_template('cadastrar_cliente.html')
-
 @app.route('/cadastrar_conta', methods=['GET', 'POST'])
 def cadastrar_conta():
-    dados = carregar_dados()
-    clientes = dados.get('clientes', [])
-    agencias = dados.get('agencias', [])
-    contas = dados.get('contas', [])
-
+    dados_bancarios = carregar_dados()
+    lista_clientes = dados_bancarios.clientes
+    lista_agencias = dados_bancarios.agencias
+    lista_contas = dados_bancarios.contas
     if request.method == 'POST':
-        numero = request.form.get('numero')
-        cpf_digitado = request.form.get('cpf_titular')
-        num_agencia = request.form.get('num_agencia')
-        senha = request.form.get('senha')
-        tipo = request.form.get('tipo')
-
+        numero_conta = request.form.get('numero', '')
+        cpf_digitado = request.form.get('cpf_titular', '')
+        numero_agencia = request.form.get('num_agencia', '')
+        senha_conta = request.form.get('senha', '')
+        tipo_conta = request.form.get('tipo', '')
         cpf_titular = ''.join(filter(str.isdigit, cpf_digitado))
-
-        if not any(c.get('cpf') == cpf_titular for c in clientes):
-            return render_template('cadastrar_conta.html', 
-                                   erro="Cliente não cadastrado. Por favor, cadastre o cliente antes de criar a conta.", 
-                                   agencias=agencias)
-
-        if any(c.get('numero') == numero for c in contas):
-            return render_template('cadastrar_conta.html', 
-                                   erro="O número desta conta já está em uso.", 
-                                   agencias=agencias)
-
-        nova_conta = {
-            "numero": numero,
-            "cpf_titular": cpf_titular,
-            "num_agencia": num_agencia,
-            "senha": senha,
-            "saldo": 0.0,
-            "tipo": tipo
-        }
-
-        dados.setdefault('contas', []).append(nova_conta)
-        salvar_dados(dados)
-        
+        if not any(
+            cliente.cpf == cpf_titular
+            for cliente in lista_clientes
+        ):
+            return render_template(
+                'cadastrar_conta.html',
+                erro=(
+                    'Cliente não cadastrado. Por favor, cadastre o cliente '
+                    'antes de criar a conta.'
+                ),
+                agencias=lista_agencias
+            )
+        if any(conta.numero == numero_conta for conta in lista_contas):
+            return render_template(
+                'cadastrar_conta.html',
+                erro='O número desta conta já está em uso.',
+                agencias=lista_agencias
+            )
+        nova_conta = Conta(
+            numero=numero_conta,
+            cpf_titular=cpf_titular,
+            num_agencia=numero_agencia,
+            senha=senha_conta,
+            saldo=0.0,
+            tipo=tipo_conta
+        )
+        dados_bancarios.contas.append(nova_conta)
+        salvar_dados(dados_bancarios)
         return redirect(url_for('index'))
-
-    return render_template('cadastrar_conta.html', clientes=clientes, agencias=agencias)
-
+    return render_template(
+        'cadastrar_conta.html',
+        clientes=lista_clientes,
+        agencias=lista_agencias
+    )
 @app.route('/cadastrar_agencia', methods=['GET', 'POST'])
 def cadastrar_agencia():
     if request.method == 'POST':
-        numero = request.form.get('numero')
-        nome = request.form.get('nome')
-        endereco = request.form.get('endereco')
+        numero_agencia = request.form.get('numero', '')
+        nome_agencia = request.form.get('nome', '')
+        endereco_agencia = request.form.get('endereco', '')
 
-        dados = carregar_dados()
-        agencias = dados.get('agencias', [])
+        dados_bancarios = carregar_dados()
+        lista_agencias = dados_bancarios.agencias
 
-        if any(a.get('numero') == numero for a in agencias):
-            return render_template('cadastrar_agencia.html', 
-                                   erro="Este número de agência já está registado no sistema.")
-
-        nova_agencia = {
-            "numero": numero,
-            "nome": nome,
-            "endereco": endereco
-        }
-
-        dados.setdefault('agencias', []).append(nova_agencia)
-        salvar_dados(dados)
-        
+        if any(
+            agencia.numero == numero_agencia
+            for agencia in lista_agencias
+        ):
+            return render_template(
+                'cadastrar_agencia.html',
+                erro='Este número de agência já está registado no sistema.'
+            )
+        nova_agencia = Agencia(
+            numero=numero_agencia,
+            nome=nome_agencia,
+            endereco=endereco_agencia
+        )
+        dados_bancarios.agencias.append(nova_agencia)
+        salvar_dados(dados_bancarios)
         return redirect(url_for('index'))
-
     return render_template('cadastrar_agencia.html')
-
 @app.route('/operacoes', methods=['GET', 'POST'])
 def operacoes():
     mensagem_sucesso = None
     mensagem_erro = None
-
     if request.method == 'POST':
-        numero_conta = request.form.get('numero_conta')
-        senha = request.form.get('senha')
-        tipo_operacao = request.form.get('tipo_operacao')
-        
+        numero_conta_origem = request.form.get('numero_conta', '')
+        senha_informada = request.form.get('senha', '')
+        tipo_operacao = request.form.get('tipo_operacao', '')
         try:
-            valor = float(request.form.get('valor', 0))
-        except ValueError:
-            valor = 0.0
-
-        dados = carregar_dados()
-        contas = dados.get('contas', [])
+            valor_operacao = float(request.form.get('valor', 0))
+        except (TypeError, ValueError):
+            valor_operacao = 0.0
+        dados_bancarios = carregar_dados()
+        lista_contas = dados_bancarios.contas
 
         # 1. Procura a conta e verifica a senha (Segurança)
-        conta_origem = next((c for c in contas if c.get('numero') == numero_conta), None)
-
+        conta_origem = next(
+            (
+                conta for conta in lista_contas
+                if conta.numero == numero_conta_origem
+            ),
+            None
+        )
         if not conta_origem:
-            mensagem_erro = "Conta não encontrada no sistema."
-        elif str(conta_origem.get('senha')) != str(senha):
-            mensagem_erro = "Senha incorreta. Operação negada."
+            mensagem_erro = 'Conta não encontrada no sistema.'
+        elif str(conta_origem.senha) != str(senha_informada):
+            mensagem_erro = 'Senha incorreta. Operação negada.'
         else:
             # 2. Executa a operação escolhida
             if tipo_operacao == 'saldo':
-                mensagem_sucesso = f"Consulta realizada. O seu saldo atual é de R$ {conta_origem.get('saldo', 0):.2f}"
-            
+                mensagem_sucesso = (
+                    'Consulta realizada. O seu saldo atual é de '
+                    f'R$ {conta_origem.saldo:.2f}'
+                )
+
             elif tipo_operacao == 'depositar':
-                if valor > 0:
-                    conta_origem['saldo'] = conta_origem.get('saldo', 0) + valor
-                    salvar_dados(dados)
-                    mensagem_sucesso = f"Depósito de R$ {valor:.2f} realizado com sucesso!"
+                if valor_operacao > 0:
+                    conta_origem.depositar(valor_operacao)
+                    salvar_dados(dados_bancarios)
+                    mensagem_sucesso = (
+                        f'Depósito de R$ {valor_operacao:.2f} realizado com sucesso!'
+                    )
                 else:
-                    mensagem_erro = "Para depositar, o valor deve ser maior que zero."
-            
+                    mensagem_erro = 'Para depositar, o valor deve ser maior que zero.'
+
             elif tipo_operacao == 'sacar':
-                if valor <= 0:
-                    mensagem_erro = "O valor do saque deve ser maior que zero."
-                elif conta_origem.get('saldo', 0) >= valor:
-                    conta_origem['saldo'] -= valor
-                    salvar_dados(dados)
-                    mensagem_sucesso = f"Saque de R$ {valor:.2f} realizado com sucesso!"
+                if valor_operacao <= 0:
+                    mensagem_erro = 'O valor do saque deve ser maior que zero.'
+                elif conta_origem.saldo >= valor_operacao:
+                    conta_origem.sacar(valor_operacao)
+                    salvar_dados(dados_bancarios)
+                    mensagem_sucesso = (
+                        f'Saque de R$ {valor_operacao:.2f} realizado com sucesso!'
+                    )
                 else:
-                    mensagem_erro = "Saldo insuficiente para realizar este saque."
-            
+                    mensagem_erro = 'Saldo insuficiente para realizar este saque.'
+
             elif tipo_operacao == 'transferir':
-                numero_destino = request.form.get('conta_destino')
-                conta_destino = next((c for c in contas if c.get('numero') == numero_destino), None)
-                
+                numero_conta_destino = request.form.get('conta_destino', '')
+                conta_destino = next(
+                    (
+                        conta for conta in lista_contas
+                        if conta.numero == numero_conta_destino
+                    ),
+                    None
+                )
                 if not conta_destino:
-                    mensagem_erro = "A conta de destino não existe."
-                elif numero_conta == numero_destino:
-                    mensagem_erro = "Não é possível transferir dinheiro para a própria conta."
-                elif valor <= 0:
-                    mensagem_erro = "O valor da transferência deve ser maior que zero."
-                elif conta_origem.get('saldo', 0) >= valor:
-                    conta_origem['saldo'] -= valor
-                    conta_destino['saldo'] = conta_destino.get('saldo', 0) + valor
-                    salvar_dados(dados)
-                    mensagem_sucesso = f"Transferência de R$ {valor:.2f} para a conta {numero_destino} concluída!"
+                    mensagem_erro = 'A conta de destino não existe.'
+                elif numero_conta_origem == numero_conta_destino:
+                    mensagem_erro = (
+                        'Não é possível transferir dinheiro para a própria conta.'
+                    )
+                elif valor_operacao <= 0:
+                    mensagem_erro = (
+                        'O valor da transferência deve ser maior que zero.'
+                    )
+                elif conta_origem.saldo >= valor_operacao:
+                    conta_origem.sacar(valor_operacao)
+                    conta_destino.depositar(valor_operacao)
+                    salvar_dados(dados_bancarios)
+                    mensagem_sucesso = (
+                        f'Transferência de R$ {valor_operacao:.2f} para a conta '
+                        f'{numero_conta_destino} concluída!'
+                    )
                 else:
-                    mensagem_erro = "Saldo insuficiente para realizar esta transferência."
+                    mensagem_erro = (
+                        'Saldo insuficiente para realizar esta transferência.'
+                    )
 
-    return render_template('operacoes.html', erro=mensagem_erro, sucesso=mensagem_sucesso)
-
+    return render_template(
+        'operacoes.html',
+        erro=mensagem_erro,
+        sucesso=mensagem_sucesso
+    )
 @app.route('/excluir_cliente/<cpf>', methods=['POST'])
 def excluir_cliente(cpf):
     """Exclui um cliente e encerra todas as contas associadas a ele."""
-    dados = carregar_dados()
-    
-    dados['clientes'] = [c for c in dados.get('clientes', []) if c.get('cpf') != cpf]
-    
-    dados['contas'] = [c for c in dados.get('contas', []) if c.get('cpf_titular') != cpf]
-    
-    salvar_dados(dados)
-    return redirect(url_for('index'))
+    dados_bancarios = carregar_dados()
 
+    dados_bancarios.clientes = [
+        cliente for cliente in dados_bancarios.clientes
+        if cliente.cpf != cpf
+    ]
+
+    dados_bancarios.contas = [
+        conta for conta in dados_bancarios.contas
+        if conta.cpf_titular != cpf
+    ]
+
+    salvar_dados(dados_bancarios)
+    return redirect(url_for('index'))
 @app.route('/encerrar_conta/<numero>', methods=['POST'])
 def encerrar_conta(numero):
     """Encerra uma conta específica baseada no número."""
-    dados = carregar_dados()
-    
-    dados['contas'] = [c for c in dados.get('contas', []) if c.get('numero') != numero]
-    
-    salvar_dados(dados)
-    return redirect(url_for('index'))
+    dados_bancarios = carregar_dados()
 
+    dados_bancarios.contas = [
+        conta for conta in dados_bancarios.contas
+        if conta.numero != numero
+    ]
+    salvar_dados(dados_bancarios)
+    return redirect(url_for('index'))
 @app.route('/editar_cliente/<cpf>', methods=['GET', 'POST'])
 def editar_cliente(cpf):
-    dados = carregar_dados()
-    clientes = dados.get('clientes', [])
-    
-    cliente_atual = next((c for c in clientes if c.get('cpf') == cpf), None)
-    
+    dados_bancarios = carregar_dados()
+    lista_clientes = dados_bancarios.clientes
+
+    cliente_atual = next(
+        (cliente for cliente in lista_clientes if cliente.cpf == cpf),
+        None
+    )
     if not cliente_atual:
         return redirect(url_for('index'))
-
     if request.method == 'POST':
-        novo_nome = request.form.get('nome')
-        novo_telefone = request.form.get('telefone')
-        novo_endereco = request.form.get('endereco')
-        
-        cliente_atual['nome'] = novo_nome
-        cliente_atual['telefone'] = novo_telefone
-        cliente_atual['endereco'] = novo_endereco
-        
-        salvar_dados(dados)
+        novo_nome = request.form.get('nome', '')
+        novo_telefone = request.form.get('telefone', '')
+        novo_endereco = request.form.get('endereco', '')
+        cliente_atual.nome = novo_nome
+        cliente_atual.telefone = novo_telefone
+        cliente_atual.endereco = novo_endereco
+        salvar_dados(dados_bancarios)
         return redirect(url_for('index'))
-
     return render_template('editar_cliente.html', cliente=cliente_atual)
-
 if __name__ == '__main__':
-    print("Iniciando o servidor Flask...")
+    print('Iniciando o servidor Flask...')
     app.run(debug=True)
