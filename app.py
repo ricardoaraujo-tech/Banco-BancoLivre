@@ -105,6 +105,7 @@ def carregar_dados() -> DadosBancarios:
 
     return DadosBancarios()
 def salvar_dados(dados_bancarios: DadosBancarios) -> None:
+    os.makedirs(os.path.dirname(CAMINHO_ARQUIVO_DADOS), exist_ok=True)
     with open(CAMINHO_ARQUIVO_DADOS, 'w', encoding='utf-8') as arquivo_dados:
         json.dump(
             dados_bancarios.para_dicionario(),
