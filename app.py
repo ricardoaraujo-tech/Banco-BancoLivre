@@ -215,8 +215,7 @@ def cadastrar_cliente():
         )
         dados_bancarios.clientes.append(novo_cliente)
         salvar_dados(dados_bancarios)
-
-       return redirect(url_for('index'))
+        return redirect(url_for('index'))
     return render_template('cadastrar_cliente.html')
 @app.route('/cadastrar_conta', methods=['GET', 'POST'])
 def cadastrar_conta():
