@@ -2,11 +2,8 @@ import json
 import os
 from dataclasses import asdict, dataclass, field
 from typing import List, Optional
-
 from flask import Flask, redirect, render_template, request, url_for
-
 from models.cliente import validar_cpf
-
 app = Flask(__name__)
 CAMINHO_ARQUIVO_DADOS = 'data/dados_bancos.json'
 @dataclass
@@ -30,7 +27,6 @@ class Agencia:
     numero: str
     nome: str
     endereco: str
-
     @classmethod
     def de_dicionario(cls, dados_agencia: dict) -> 'Agencia':
         return cls(
@@ -71,7 +67,6 @@ class DadosBancarios:
     clientes: List[Cliente] = field(default_factory=list)
     agencias: List[Agencia] = field(default_factory=list)
     contas: List[Conta] = field(default_factory=list)
-
     @classmethod
     def de_dicionario(cls, dados: dict) -> 'DadosBancarios':
         return cls(
