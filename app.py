@@ -3,15 +3,41 @@ import os
 from dataclasses import asdict, dataclass, field
 from typing import List, Optional
 from flask import Flask, redirect, render_template, request, url_for
-from models.cliente import validar_cpf
+
 app = Flask(__name__)
 CAMINHO_ARQUIVO_DADOS = 'data/dados_bancos.json'
+
+def validar_cpf(cpf):
+    cpf_limpo = ''.join(filter(str.isdigit, str(cpf)))
+    
+    if len(cpf_limpo) != 11 or cpf_limpo == cpf_limpo[0] * 11:
+        return False
+
+    soma = 0
+    for i in range(9):
+        soma += int(cpf_limpo[i]) * (10 - i)
+    digito1 = (soma * 10 % 11) % 10
+
+    if digito1 != int(cpf_limpo[9]):
+        return False
+
+    soma = 0
+    for i in range(10):
+        soma += int(cpf_limpo[i]) * (11 - i)
+    digito2 = (soma * 10 % 11) % 10
+    
+    if digito2 != int(cpf_limpo[10]):
+        return False
+        
+    return True
+
 @dataclass
 class Cliente:
     nome: str
     cpf: str
     telefone: str
     endereco: str
+
     @classmethod
     def de_dicionario(cls, dados_cliente: dict) -> 'Cliente':
         return cls(
@@ -20,13 +46,16 @@ class Cliente:
             telefone=dados_cliente.get('telefone', ''),
             endereco=dados_cliente.get('endereco', '')
         )
+
     def para_dicionario(self) -> dict:
         return asdict(self)
+
 @dataclass
 class Agencia:
     numero: str
     nome: str
     endereco: str
+
     @classmethod
     def de_dicionario(cls, dados_agencia: dict) -> 'Agencia':
         return cls(
@@ -34,8 +63,10 @@ class Agencia:
             nome=dados_agencia.get('nome', ''),
             endereco=dados_agencia.get('endereco', '')
         )
+
     def para_dicionario(self) -> dict:
         return asdict(self)
+
 @dataclass
 class Conta:
     numero: str
@@ -44,6 +75,7 @@ class Conta:
     senha: str
     saldo: float = 0.0
     tipo: str = ''
+
     @classmethod
     def de_dicionario(cls, dados_conta: dict) -> 'Conta':
         return cls(
@@ -54,6 +86,7 @@ class Conta:
             saldo=float(dados_conta.get('saldo', 0.0)),
             tipo=dados_conta.get('tipo', '')
         )
+
     def para_dicionario(self) -> dict:
         return asdict(self)
 
@@ -62,33 +95,41 @@ class Conta:
 
     def sacar(self, valor: float) -> None:
         self.saldo -= valor
+
 @dataclass
 class DadosBancarios:
     clientes: List[Cliente] = field(default_factory=list)
     agencias: List[Agencia] = field(default_factory=list)
     contas: List[Conta] = field(default_factory=list)
+
     @classmethod
     def de_dicionario(cls, dados: dict) -> 'DadosBancarios':
+        agencias_carregadas = [
+            Agencia.de_dicionario(dados_agencia)
+            for dados_agencia in dados.get('agencias', [])
+        ]
+        if not agencias_carregadas:
+            agencias_carregadas = [Agencia(numero="001", nome="Agência Principal", endereco="Matriz Central")]
+
         return cls(
             clientes=[
                 Cliente.de_dicionario(dados_cliente)
                 for dados_cliente in dados.get('clientes', [])
             ],
-            agencias=[
-                Agencia.de_dicionario(dados_agencia)
-                for dados_agencia in dados.get('agencias', [])
-            ],
+            agencias=agencias_carregadas,
             contas=[
                 Conta.de_dicionario(dados_conta)
                 for dados_conta in dados.get('contas', [])
             ]
         )
+
     def para_dicionario(self) -> dict:
         return {
             'clientes': [cliente.para_dicionario() for cliente in self.clientes],
             'agencias': [agencia.para_dicionario() for agencia in self.agencias],
             'contas': [conta.para_dicionario() for conta in self.contas]
         }
+
 @dataclass
 class Dashboard:
     num_clientes: int
@@ -97,13 +138,17 @@ class Dashboard:
     saldo_medio: float
     maior_conta: Optional[Conta]
     menor_conta: Optional[Conta]
+
 def carregar_dados() -> DadosBancarios:
     if os.path.exists(CAMINHO_ARQUIVO_DADOS):
         with open(CAMINHO_ARQUIVO_DADOS, 'r', encoding='utf-8') as arquivo_dados:
             dados_json = json.load(arquivo_dados)
             return DadosBancarios.de_dicionario(dados_json)
 
-    return DadosBancarios()
+    return DadosBancarios(
+        agencias=[Agencia(numero="001", nome="Agência Principal", endereco="Matriz Central")]
+    )
+
 def salvar_dados(dados_bancarios: DadosBancarios) -> None:
     os.makedirs(os.path.dirname(CAMINHO_ARQUIVO_DADOS), exist_ok=True)
     with open(CAMINHO_ARQUIVO_DADOS, 'w', encoding='utf-8') as arquivo_dados:
@@ -113,27 +158,23 @@ def salvar_dados(dados_bancarios: DadosBancarios) -> None:
             indent=4,
             ensure_ascii=False
         )
+
 @app.route('/')
 def index():
-    """Página principal com Dashboard, Listagens e Sistema de Busca Unificada."""
     dados_bancarios = carregar_dados()
     lista_clientes = dados_bancarios.clientes
     lista_agencias = dados_bancarios.agencias
     lista_contas = dados_bancarios.contas
 
-    # 1. Captura o que o utilizador digitou na barra de pesquisa (se existir)
     termo_busca = request.args.get('busca', '').lower().strip()
 
-    # 2. Se houver pesquisa, filtra as listas
     if termo_busca:
-        # Filtra clientes se o nome ou CPF contiverem o termo
         lista_clientes = [
             cliente for cliente in lista_clientes
             if termo_busca in cliente.nome.lower()
             or termo_busca in cliente.cpf
         ]
 
-        # Filtra contas se o número da conta ou CPF do titular contiverem o termo
         contas_filtradas = [
             conta for conta in lista_contas
             if termo_busca in str(conta.numero)
@@ -146,7 +187,7 @@ def index():
         conta for conta in contas_filtradas
         if conta.saldo > 0
     ]
-    # 3. Matemática do Dashboard
+    
     quantidade_clientes = len(dados_bancarios.clientes)
     quantidade_contas = len(dados_bancarios.contas)
     saldo_total = sum(conta.saldo for conta in dados_bancarios.contas)
@@ -168,6 +209,7 @@ def index():
     else:
         conta_com_maior_saldo = None
         conta_com_menor_saldo = None
+        
     dashboard = Dashboard(
         num_clientes=quantidade_clientes,
         num_contas=quantidade_contas,
@@ -184,6 +226,7 @@ def index():
         dashboard=dashboard,
         termo_busca=termo_busca
     )
+
 @app.route('/cadastrar_cliente', methods=['GET', 'POST'])
 def cadastrar_cliente():
     if request.method == 'POST':
@@ -218,19 +261,22 @@ def cadastrar_cliente():
         salvar_dados(dados_bancarios)
         return redirect(url_for('index'))
     return render_template('cadastrar_cliente.html')
+
 @app.route('/cadastrar_conta', methods=['GET', 'POST'])
 def cadastrar_conta():
     dados_bancarios = carregar_dados()
     lista_clientes = dados_bancarios.clientes
     lista_agencias = dados_bancarios.agencias
     lista_contas = dados_bancarios.contas
+    
     if request.method == 'POST':
         numero_conta = request.form.get('numero', '')
         cpf_digitado = request.form.get('cpf_titular', '')
-        numero_agencia = request.form.get('num_agencia', '')
         senha_conta = request.form.get('senha', '')
         tipo_conta = request.form.get('tipo', '')
+        
         cpf_titular = ''.join(filter(str.isdigit, cpf_digitado))
+        
         if not any(
             cliente.cpf == cpf_titular
             for cliente in lista_clientes
@@ -243,16 +289,20 @@ def cadastrar_conta():
                 ),
                 agencias=lista_agencias
             )
+            
         if any(conta.numero == numero_conta for conta in lista_contas):
             return render_template(
                 'cadastrar_conta.html',
                 erro='O número desta conta já está em uso.',
                 agencias=lista_agencias
             )
+
+        num_agencia_unica = lista_agencias[0].numero if lista_agencias else "001"
+
         nova_conta = Conta(
             numero=numero_conta,
             cpf_titular=cpf_titular,
-            num_agencia=numero_agencia,
+            num_agencia=num_agencia_unica,
             senha=senha_conta,
             saldo=0.0,
             tipo=tipo_conta
@@ -260,38 +310,13 @@ def cadastrar_conta():
         dados_bancarios.contas.append(nova_conta)
         salvar_dados(dados_bancarios)
         return redirect(url_for('index'))
+        
     return render_template(
         'cadastrar_conta.html',
         clientes=lista_clientes,
         agencias=lista_agencias
     )
-@app.route('/cadastrar_agencia', methods=['GET', 'POST'])
-def cadastrar_agencia():
-    if request.method == 'POST':
-        numero_agencia = request.form.get('numero', '')
-        nome_agencia = request.form.get('nome', '')
-        endereco_agencia = request.form.get('endereco', '')
 
-        dados_bancarios = carregar_dados()
-        lista_agencias = dados_bancarios.agencias
-
-        if any(
-            agencia.numero == numero_agencia
-            for agencia in lista_agencias
-        ):
-            return render_template(
-                'cadastrar_agencia.html',
-                erro='Este número de agência já está registado no sistema.'
-            )
-        nova_agencia = Agencia(
-            numero=numero_agencia,
-            nome=nome_agencia,
-            endereco=endereco_agencia
-        )
-        dados_bancarios.agencias.append(nova_agencia)
-        salvar_dados(dados_bancarios)
-        return redirect(url_for('index'))
-    return render_template('cadastrar_agencia.html')
 @app.route('/operacoes', methods=['GET', 'POST'])
 def operacoes():
     mensagem_sucesso = None
@@ -304,10 +329,10 @@ def operacoes():
             valor_operacao = float(request.form.get('valor', 0))
         except (TypeError, ValueError):
             valor_operacao = 0.0
+            
         dados_bancarios = carregar_dados()
         lista_contas = dados_bancarios.contas
 
-        # 1. Procura a conta e verifica a senha (Segurança)
         conta_origem = next(
             (
                 conta for conta in lista_contas
@@ -320,7 +345,6 @@ def operacoes():
         elif str(conta_origem.senha) != str(senha_informada):
             mensagem_erro = 'Senha incorreta. Operação negada.'
         else:
-            # 2. Executa a operação escolhida
             if tipo_operacao == 'saldo':
                 mensagem_sucesso = (
                     'Consulta realizada. O seu saldo atual é de '
@@ -386,9 +410,9 @@ def operacoes():
         erro=mensagem_erro,
         sucesso=mensagem_sucesso
     )
+
 @app.route('/excluir_cliente/<cpf>', methods=['POST'])
 def excluir_cliente(cpf):
-    """Exclui um cliente e encerra todas as contas associadas a ele."""
     dados_bancarios = carregar_dados()
 
     dados_bancarios.clientes = [
@@ -403,9 +427,9 @@ def excluir_cliente(cpf):
 
     salvar_dados(dados_bancarios)
     return redirect(url_for('index'))
+
 @app.route('/encerrar_conta/<numero>', methods=['POST'])
 def encerrar_conta(numero):
-    """Encerra uma conta específica baseada no número."""
     dados_bancarios = carregar_dados()
 
     dados_bancarios.contas = [
@@ -414,6 +438,7 @@ def encerrar_conta(numero):
     ]
     salvar_dados(dados_bancarios)
     return redirect(url_for('index'))
+
 @app.route('/editar_cliente/<cpf>', methods=['GET', 'POST'])
 def editar_cliente(cpf):
     dados_bancarios = carregar_dados()
@@ -435,6 +460,7 @@ def editar_cliente(cpf):
         salvar_dados(dados_bancarios)
         return redirect(url_for('index'))
     return render_template('editar_cliente.html', cliente=cliente_atual)
+
 if __name__ == '__main__':
     print('Iniciando o servidor Flask...')
     app.run(debug=True)
