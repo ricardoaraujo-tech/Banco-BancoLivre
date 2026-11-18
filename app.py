@@ -1,5 +1,7 @@
 import json
 import os
+import atexit
+from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, field
 from typing import List, Optional
 from flask import Flask, redirect, render_template, request, url_for
@@ -68,33 +70,64 @@ class Agencia:
         return asdict(self)
 
 @dataclass
-class Conta:
+class Conta(ABC):
     numero: str
     cpf_titular: str
     num_agencia: str
     senha: str
     saldo: float = 0.0
-    tipo: str = ''
+
+    @abstractmethod
+    def get_tipo(self) -> str:
+        pass
 
     @classmethod
     def de_dicionario(cls, dados_conta: dict) -> 'Conta':
-        return cls(
-            numero=dados_conta.get('numero', ''),
-            cpf_titular=dados_conta.get('cpf_titular', ''),
-            num_agencia=dados_conta.get('num_agencia', ''),
-            senha=str(dados_conta.get('senha', '')),
-            saldo=float(dados_conta.get('saldo', 0.0)),
-            tipo=dados_conta.get('tipo', '')
-        )
+        tipo = dados_conta.get('tipo', '').lower()
+        if tipo == 'corrente':
+            return ContaCorrente(
+                numero = dados_conta.get('numero', ''),
+                cpf_titular = dados_conta.get('cpf_titular', ''),
+                num_agencia = dados_conta.get('num_agencia', ''),
+                senha = str(dados_conta.get('senha', '')),
+                saldo = float(dados_conta.get('saldo', 0.0))
+            )
+        else:
+            return ContaPoupanca(
+                numero = dados_conta.get('numero', ''),
+                cpf_titular = dados_conta.get('cpf_titular', ''),
+                num_agencia = dados_conta.get('num_agencia', ''),
+                senha = str(dados_conta.get('senha', '')),
+                saldo = float(dados_conta.get('saldo', 0.0))
+            )
 
     def para_dicionario(self) -> dict:
-        return asdict(self)
+        dados = asdict(self)
+        dados['tipo'] = self.get_tipo()
+        return dados
 
     def depositar(self, valor: float) -> None:
-        self.saldo += valor
+        if valor > 0:
+            self.saldo += valor
+        else:
+            raise ValueError("O valor do depósito deve ser maior que zero.")
 
     def sacar(self, valor: float) -> None:
+        if valor <= 0:
+            raise ValueError("O valor do saque deve ser maior que zero.")
+        if self.saldo < valor:
+            raise ValueError("Saldo insuficiente para realizar o saque.")
         self.saldo -= valor
+
+@dataclass
+class ContaCorrente(Conta):
+    def get_tipo(self) -> str:
+        return 'corrente'
+
+@dataclass
+class ContaPoupanca(Conta):
+    def get_tipo(self) -> str:
+        return 'poupanca'
 
 @dataclass
 class DadosBancarios:
@@ -159,12 +192,20 @@ def salvar_dados(dados_bancarios: DadosBancarios) -> None:
             ensure_ascii=False
         )
 
+banco_em_memoria = carregar_dados()
+
+def salvar_ao_encerrar():
+    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+        print('Salvando dados antes de encerrar o servidor...')
+        salvar_dados(banco_em_memoria)
+
+atexit.register(salvar_ao_encerrar)
+
 @app.route('/')
 def index():
-    dados_bancarios = carregar_dados()
-    lista_clientes = dados_bancarios.clientes
-    lista_agencias = dados_bancarios.agencias
-    lista_contas = dados_bancarios.contas
+    lista_clientes = banco_em_memoria.clientes
+    lista_agencias = banco_em_memoria.agencias
+    lista_contas = banco_em_memoria.contas
 
     termo_busca = request.args.get('busca', '').lower().strip()
 
@@ -175,10 +216,13 @@ def index():
             or termo_busca in cliente.cpf
         ]
 
+        cpfs_buscados = [cliente.cpf for cliente in lista_clientes]
+
         contas_filtradas = [
             conta for conta in lista_contas
             if termo_busca in str(conta.numero)
             or termo_busca in conta.cpf_titular
+            or conta.cpf_titular in cpfs_buscados
         ]
     else:
         contas_filtradas = lista_contas
@@ -188,22 +232,22 @@ def index():
         if conta.saldo > 0
     ]
     
-    quantidade_clientes = len(dados_bancarios.clientes)
-    quantidade_contas = len(dados_bancarios.contas)
-    saldo_total = sum(conta.saldo for conta in dados_bancarios.contas)
+    quantidade_clientes = len(banco_em_memoria.clientes)
+    quantidade_contas = len(banco_em_memoria.contas)
+    saldo_total = sum(conta.saldo for conta in banco_em_memoria.contas)
     saldo_medio = (
         saldo_total / quantidade_contas
         if quantidade_contas > 0
         else 0.0
     )
 
-    if dados_bancarios.contas:
+    if banco_em_memoria.contas:
         conta_com_maior_saldo = max(
-            dados_bancarios.contas,
+            banco_em_memoria.contas,
             key=lambda conta: conta.saldo
         )
         conta_com_menor_saldo = min(
-            dados_bancarios.contas,
+            banco_em_memoria.contas,
             key=lambda conta: conta.saldo
         )
     else:
@@ -241,11 +285,10 @@ def cadastrar_cliente():
                 erro='CPF inválido. Verifique o formato e tente novamente.'
             )
         cpf_cliente = ''.join(filter(str.isdigit, cpf_digitado))
-        dados_bancarios = carregar_dados()
 
         if any(
             cliente.cpf == cpf_cliente
-            for cliente in dados_bancarios.clientes
+            for cliente in banco_em_memoria.clientes
         ):
             return render_template(
                 'cadastrar_cliente.html',
@@ -257,18 +300,16 @@ def cadastrar_cliente():
             telefone=telefone_cliente,
             endereco=endereco_cliente
         )
-        dados_bancarios.clientes.append(novo_cliente)
-        salvar_dados(dados_bancarios)
+        banco_em_memoria.clientes.append(novo_cliente)
         return redirect(url_for('index'))
     return render_template('cadastrar_cliente.html')
 
 @app.route('/cadastrar_conta', methods=['GET', 'POST'])
 def cadastrar_conta():
-    dados_bancarios = carregar_dados()
-    lista_clientes = dados_bancarios.clientes
-    lista_agencias = dados_bancarios.agencias
-    lista_contas = dados_bancarios.contas
-    
+    lista_clientes = banco_em_memoria.clientes
+    lista_agencias = banco_em_memoria.agencias
+    lista_contas = banco_em_memoria.contas
+
     if request.method == 'POST':
         numero_conta = request.form.get('numero', '')
         cpf_digitado = request.form.get('cpf_titular', '')
@@ -299,16 +340,24 @@ def cadastrar_conta():
 
         num_agencia_unica = lista_agencias[0].numero if lista_agencias else "001"
 
-        nova_conta = Conta(
-            numero=numero_conta,
-            cpf_titular=cpf_titular,
-            num_agencia=num_agencia_unica,
-            senha=senha_conta,
-            saldo=0.0,
-            tipo=tipo_conta
-        )
-        dados_bancarios.contas.append(nova_conta)
-        salvar_dados(dados_bancarios)
+        if tipo_conta.lower() == 'corrente':
+            nova_conta = ContaCorrente(
+                numero = numero_conta,
+                cpf_titular = cpf_titular,
+                num_agencia = num_agencia_unica,
+                senha = senha_conta,
+                saldo = 0.0
+            )
+        else: 
+            nova_conta = ContaPoupanca(
+                numero = numero_conta,
+                cpf_titular = cpf_titular,
+                num_agencia = num_agencia_unica,
+                senha = senha_conta,
+                saldo = 0.0
+            )
+
+        banco_em_memoria.contas.append(nova_conta)
         return redirect(url_for('index'))
         
     return render_template(
@@ -330,8 +379,7 @@ def operacoes():
         except (TypeError, ValueError):
             valor_operacao = 0.0
             
-        dados_bancarios = carregar_dados()
-        lista_contas = dados_bancarios.contas
+        lista_contas = banco_em_memoria.contas
 
         conta_origem = next(
             (
@@ -354,7 +402,6 @@ def operacoes():
             elif tipo_operacao == 'depositar':
                 if valor_operacao > 0:
                     conta_origem.depositar(valor_operacao)
-                    salvar_dados(dados_bancarios)
                     mensagem_sucesso = (
                         f'Depósito de R$ {valor_operacao:.2f} realizado com sucesso!'
                     )
@@ -366,7 +413,6 @@ def operacoes():
                     mensagem_erro = 'O valor do saque deve ser maior que zero.'
                 elif conta_origem.saldo >= valor_operacao:
                     conta_origem.sacar(valor_operacao)
-                    salvar_dados(dados_bancarios)
                     mensagem_sucesso = (
                         f'Saque de R$ {valor_operacao:.2f} realizado com sucesso!'
                     )
@@ -395,7 +441,6 @@ def operacoes():
                 elif conta_origem.saldo >= valor_operacao:
                     conta_origem.sacar(valor_operacao)
                     conta_destino.depositar(valor_operacao)
-                    salvar_dados(dados_bancarios)
                     mensagem_sucesso = (
                         f'Transferência de R$ {valor_operacao:.2f} para a conta '
                         f'{numero_conta_destino} concluída!'
@@ -413,36 +458,31 @@ def operacoes():
 
 @app.route('/excluir_cliente/<cpf>', methods=['POST'])
 def excluir_cliente(cpf):
-    dados_bancarios = carregar_dados()
 
-    dados_bancarios.clientes = [
-        cliente for cliente in dados_bancarios.clientes
+    banco_em_memoria.clientes = [
+        cliente for cliente in banco_em_memoria.clientes
         if cliente.cpf != cpf
     ]
 
-    dados_bancarios.contas = [
-        conta for conta in dados_bancarios.contas
+    banco_em_memoria.contas = [
+        conta for conta in banco_em_memoria.contas
         if conta.cpf_titular != cpf
     ]
 
-    salvar_dados(dados_bancarios)
     return redirect(url_for('index'))
 
 @app.route('/encerrar_conta/<numero>', methods=['POST'])
 def encerrar_conta(numero):
-    dados_bancarios = carregar_dados()
 
-    dados_bancarios.contas = [
-        conta for conta in dados_bancarios.contas
+    banco_em_memoria.contas = [
+        conta for conta in banco_em_memoria.contas
         if conta.numero != numero
     ]
-    salvar_dados(dados_bancarios)
     return redirect(url_for('index'))
 
 @app.route('/editar_cliente/<cpf>', methods=['GET', 'POST'])
 def editar_cliente(cpf):
-    dados_bancarios = carregar_dados()
-    lista_clientes = dados_bancarios.clientes
+    lista_clientes = banco_em_memoria.clientes
 
     cliente_atual = next(
         (cliente for cliente in lista_clientes if cliente.cpf == cpf),
@@ -457,7 +497,6 @@ def editar_cliente(cpf):
         cliente_atual.nome = novo_nome
         cliente_atual.telefone = novo_telefone
         cliente_atual.endereco = novo_endereco
-        salvar_dados(dados_bancarios)
         return redirect(url_for('index'))
     return render_template('editar_cliente.html', cliente=cliente_atual)
 

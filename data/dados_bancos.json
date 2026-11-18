@@ -7,7 +7,7 @@
             "endereco": "Rua UFS"
         },
         {
-            "nome": "Maria Clara Regi Sant Vi",
+            "nome": "Maria Clara ",
             "cpf": "76532929760",
             "telefone": "79999994444",
             "endereco": "RUA 6"
@@ -16,7 +16,8 @@
     "agencias": [
         {
             "numero": "100",
-            "nome": "Agência UFS"
+            "nome": "Agência UFS",
+            "endereco": ""
         }
     ],
     "contas": [
@@ -26,7 +27,7 @@
             "num_agencia": "100",
             "senha": "1234",
             "saldo": 630.0,
-            "tipo": "Conta Corrente"
+            "tipo": "poupanca"
         },
         {
             "numero": "014",
@@ -34,7 +35,7 @@
             "num_agencia": "100",
             "senha": "1234",
             "saldo": 10500.0,
-            "tipo": "Conta Corrente"
+            "tipo": "poupanca"
         },
         {
             "numero": "132",
@@ -42,7 +43,15 @@
             "num_agencia": "100",
             "senha": "12345",
             "saldo": 0.0,
-            "tipo": "Conta Corrente"
+            "tipo": "poupanca"
+        },
+        {
+            "numero": "016",
+            "cpf_titular": "38982424717",
+            "num_agencia": "100",
+            "senha": "1234",
+            "saldo": 1200.0,
+            "tipo": "poupanca"
         }
     ]
 }
